@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GridOS — Smart Grid Intelligence Platform</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#03070f;--bg1:#070d1a;--bg2:#0c1628;
+  --glass:rgba(12,22,40,0.7);--glass-border:rgba(56,189,248,0.12);--glass-hover:rgba(56,189,248,0.07);
+  --cyan:#38bdf8;--cyan-dim:rgba(56,189,248,0.15);
+  --green:#4ade80;--green-dim:rgba(74,222,128,0.15);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,0.15);
+  --red:#f87171;--red-dim:rgba(248,113,113,0.15);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.15);
+  --text:#e2e8f0;--text-muted:#64748b;--text-dim:#334155;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(56,189,248,0.013) 2px,rgba(56,189,248,0.013) 4px);pointer-events:none;z-index:0;}
+
+/* ═══════════════════════════════════════
+   LOGIN / REGISTER PAGE — ENHANCED
+═══════════════════════════════════════ */
+#login-page{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+.login-bg{position:absolute;inset:0;overflow:hidden;}
+#login-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
+
+/* scanline overlay */
+.login-bg::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(56,189,248,0.018) 3px,rgba(56,189,248,0.018) 4px);pointer-events:none;z-index:1;}
+
+/* corner decorations — animated */
+.login-corner{position:absolute;width:70px;height:70px;z-index:2;}
+.login-corner.tl{top:20px;left:20px;border-top:2px solid rgba(56,189,248,0.6);border-left:2px solid rgba(56,189,248,0.6);animation:corner-pulse 3s ease-in-out infinite;}
+.login-corner.tr{top:20px;right:20px;border-top:2px solid rgba(56,189,248,0.6);border-right:2px solid rgba(56,189,248,0.6);animation:corner-pulse 3s ease-in-out infinite 0.75s;}
+.login-corner.bl{bottom:20px;left:20px;border-bottom:2px solid rgba(56,189,248,0.6);border-left:2px solid rgba(56,189,248,0.6);animation:corner-pulse 3s ease-in-out infinite 1.5s;}
+.login-corner.br{bottom:20px;right:20px;border-bottom:2px solid rgba(56,189,248,0.6);border-right:2px solid rgba(56,189,248,0.6);animation:corner-pulse 3s ease-in-out infinite 2.25s;}
+@keyframes corner-pulse{0%,100%{opacity:0.5;box-shadow:none}50%{opacity:1;box-shadow:0 0 12px rgba(56,189,248,0.4);}}
+
+/* live stats ticker at top */
+.login-ticker{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;gap:0;overflow:hidden;border-bottom:1px solid rgba(56,189,248,0.1);height:30px;background:rgba(3,7,15,0.7);backdrop-filter:blur(10px);}
+.ticker-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--cyan);background:rgba(56,189,248,0.12);border-right:1px solid rgba(56,189,248,0.2);padding:0 12px;height:100%;display:flex;align-items:center;flex-shrink:0;text-transform:uppercase;}
+.ticker-track{display:flex;gap:32px;padding:0 20px;animation:ticker-scroll 20s linear infinite;white-space:nowrap;}
+@keyframes ticker-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.ticker-item{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.ticker-item .t-val{color:var(--cyan);}
+.ticker-item .t-green{color:var(--green);}
+.ticker-item .t-amber{color:var(--amber);}
+
+/* bottom status bar */
+.login-statusbar{position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:30px;background:rgba(3,7,15,0.7);backdrop-filter:blur(10px);border-top:1px solid rgba(56,189,248,0.1);}
+.login-statusbar-item{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);display:flex;align-items:center;gap:6px;}
+.sb-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green);animation:blink 2s infinite;}
+
+/* ═══════════════════════════════════════
+   FLOATING SMART GRID GRAPHIC
+═══════════════════════════════════════ */
+.login-graphic{position:absolute;z-index:3;pointer-events:none;}
+.lg-left{left:3%;top:50%;transform:translateY(-50%);width:min(340px,28vw);animation:graphic-float-left 7s ease-in-out infinite;}
+.lg-right{right:3%;top:50%;transform:translateY(-50%);width:min(340px,28vw);animation:graphic-float-right 8s ease-in-out infinite;}
+@keyframes graphic-float-left{
+  0%,100%{transform:translateY(-50%) translateX(0) rotate(-1deg);}
+  33%{transform:translateY(calc(-50% - 18px)) translateX(8px) rotate(1deg);}
+  66%{transform:translateY(calc(-50% + 14px)) translateX(-6px) rotate(-0.5deg);}
+}
+@keyframes graphic-float-right{
+  0%,100%{transform:translateY(-50%) translateX(0) rotate(1deg);}
+  33%{transform:translateY(calc(-50% + 16px)) translateX(-8px) rotate(-1deg);}
+  66%{transform:translateY(calc(-50% - 12px)) translateX(6px) rotate(0.5deg);}
+}
+/* SVG internal animations */
+.sg-spin{transform-origin:50% 50%;animation:sg-rotate 12s linear infinite;}
+.sg-spin-rev{transform-origin:50% 50%;animation:sg-rotate-rev 18s linear infinite;}
+.sg-spin-slow{transform-origin:50% 50%;animation:sg-rotate 28s linear infinite;}
+@keyframes sg-rotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes sg-rotate-rev{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
+.sg-pulse{animation:sg-pulse-a 2.5s ease-in-out infinite;}
+.sg-pulse2{animation:sg-pulse-a 2.5s ease-in-out infinite 0.6s;}
+.sg-pulse3{animation:sg-pulse-a 2.5s ease-in-out infinite 1.2s;}
+@keyframes sg-pulse-a{0%,100%{opacity:0.5;r:4}50%{opacity:1;r:6}}
+.sg-dash{stroke-dasharray:6 10;animation:sg-dash-move 2s linear infinite;}
+.sg-dash-r{stroke-dasharray:6 10;animation:sg-dash-move-r 2.5s linear infinite;}
+@keyframes sg-dash-move{to{stroke-dashoffset:-32}}
+@keyframes sg-dash-move-r{to{stroke-dashoffset:32}}
+.sg-blink{animation:sg-blink-a 1.8s ease-in-out infinite;}
+@keyframes sg-blink-a{0%,100%{opacity:1}50%{opacity:0.2}}
+.sg-wave{animation:sg-wave-a 3s ease-in-out infinite;}
+@keyframes sg-wave-a{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.3)}}
+.sg-orbit{transform-origin:160px 160px;animation:sg-rotate 6s linear infinite;}
+.sg-orbit-dot{animation:sg-rotate-rev 6s linear infinite;transform-origin:160px 160px;}
+
+/* card entry animation */
+@keyframes card-enter{from{opacity:0;transform:translateY(24px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes card-glow{0%,100%{box-shadow:0 0 0 1px rgba(56,189,248,0.06),0 24px 80px rgba(0,0,0,0.8),0 0 40px rgba(56,189,248,0.06),inset 0 1px 0 rgba(56,189,248,0.1);}50%{box-shadow:0 0 0 1px rgba(56,189,248,0.14),0 24px 80px rgba(0,0,0,0.8),0 0 70px rgba(56,189,248,0.13),0 0 120px rgba(56,189,248,0.05),inset 0 1px 0 rgba(56,189,248,0.18);}}
+.login-card{position:relative;z-index:4;width:440px;background:rgba(4,10,20,0.93);border:1px solid rgba(56,189,248,0.22);border-radius:20px;padding:44px 40px;backdrop-filter:blur(48px);animation:card-enter 0.7s cubic-bezier(0.22,1,0.36,1) both, card-glow 4s ease-in-out 0.7s infinite;}
+
+/* animated top glow line on card */
+@keyframes line-scan{0%{left:10%;width:80px}50%{left:50%;width:160px;transform:translateX(-50%)}100%{left:calc(90% - 80px);width:80px}}
+.login-card::before{content:'';position:absolute;top:-1px;left:50%;transform:translateX(-50%);width:160px;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);border-radius:1px;animation:line-scan 4s ease-in-out infinite;}
+
+/* pulsing outer rings behind card */
+@keyframes card-ring-1{0%,100%{opacity:0.18;transform:translate(-50%,-50%) scale(1)}50%{opacity:0.05;transform:translate(-50%,-50%) scale(1.1)}}
+@keyframes card-ring-2{0%,100%{opacity:0.08;transform:translate(-50%,-50%) scale(1)}50%{opacity:0.03;transform:translate(-50%,-50%) scale(1.15)}}
+.login-card::after{content:'';position:absolute;top:50%;left:50%;width:560px;height:560px;border-radius:50%;border:1px solid rgba(56,189,248,0.14);transform:translate(-50%,-50%);animation:card-ring-1 4s ease-in-out infinite;pointer-events:none;z-index:-1;}
+
+.login-card{position:relative;z-index:1;width:440px;background:rgba(7,13,26,0.95);border:1px solid var(--glass-border);border-radius:20px;padding:44px 40px;backdrop-filter:blur(30px);}
+.login-logo{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:8px;}
+.login-logo-mark{width:44px;height:44px;border:2px solid var(--cyan);border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.login-logo-mark::after{content:'';position:absolute;width:20px;height:20px;background:var(--cyan);clip-path:polygon(50% 0%,100% 40%,75% 40%,75% 100%,25% 100%,25% 40%,0% 40%);animation:bolt 2s ease-in-out infinite;}
+@keyframes bolt{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.9)}}
+.login-logo-text{font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:#fff;letter-spacing:2px;}
+.login-logo-text span{color:var(--cyan);}
+.login-tagline{text-align:center;font-size:12px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:24px;}
+
+/* Tab switcher */
+.auth-tabs{display:flex;background:var(--bg2);border:1px solid var(--glass-border);border-radius:10px;padding:4px;margin-bottom:24px;gap:4px;}
+.auth-tab{flex:1;padding:8px;text-align:center;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Syne',sans-serif;color:var(--text-muted);border:none;background:transparent;}
+.auth-tab.active{background:var(--cyan);color:#03070f;}
+
+.login-form{display:none;}
+.login-form.active{display:block;}
+
+.login-summit{text-align:center;margin-bottom:24px;}
+.login-summit-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border:1px solid rgba(167,139,250,.35);border-radius:20px;background:rgba(167,139,250,.08);font-size:11px;color:var(--purple);font-family:'JetBrains Mono',monospace;letter-spacing:.5px;}
+.lpulse{width:5px;height:5px;border-radius:50%;background:var(--purple);animation:blink 1.5s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.login-form-group{margin-bottom:14px;}
+.login-label{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;display:block;}
+.login-input{width:100%;background:var(--bg2);border:1px solid var(--glass-border);border-radius:8px;padding:11px 14px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:border-color .2s;}
+.login-input:focus{border-color:var(--cyan);}
+.login-input::placeholder{color:var(--text-dim);}
+.login-btn{width:100%;padding:13px;background:var(--cyan);color:#03070f;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px;letter-spacing:.5px;}
+.login-btn:hover{opacity:.85;}
+.login-btn.secondary{background:transparent;border:1px solid var(--glass-border);color:var(--text-muted);font-size:13px;margin-top:8px;}
+.login-hint{text-align:center;margin-top:14px;font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;}
+.login-hint span{color:var(--cyan);}
+.login-error{background:var(--red-dim);border:1px solid rgba(248,113,113,.3);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;margin-bottom:12px;display:none;}
+.login-success{background:var(--green-dim);border:1px solid rgba(74,222,128,.3);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--green);font-family:'JetBrains Mono',monospace;margin-bottom:12px;display:none;}
+
+/* Password strength */
+.pwd-strength{margin-top:6px;}
+.pwd-bar{height:3px;border-radius:2px;background:var(--text-dim);overflow:hidden;}
+.pwd-bar-fill{height:100%;border-radius:2px;transition:all .3s;width:0%;}
+.pwd-text{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);margin-top:4px;}
+
+/* Users list */
+.users-section{margin-top:16px;background:var(--bg2);border:1px solid var(--glass-border);border-radius:8px;padding:10px 14px;max-height:130px;overflow-y:auto;}
+.users-title{font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;}
+.user-entry{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.user-entry:last-child{border:none;}
+.user-entry-name{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text);}
+.user-entry-badge{font-size:10px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:20px;background:var(--cyan-dim);color:var(--cyan);border:1px solid rgba(56,189,248,.25);}
+.user-entry-del{font-size:11px;color:var(--red);cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid transparent;transition:all .2s;}
+.user-entry-del:hover{border-color:var(--red);background:var(--red-dim);}
+
+/* ═══════════════════════════════════════
+   LANDING NAV
+═══════════════════════════════════════ */
+#landing-page{display:none;position:relative;z-index:1;}
+#landing-nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:14px 40px;background:rgba(3,7,15,0.95);border-bottom:1px solid var(--glass-border);backdrop-filter:blur(20px);}
+.nav-logo{display:flex;align-items:center;gap:10px;font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:#fff;text-decoration:none;letter-spacing:2px;}
+.nav-logo span{color:var(--cyan);}
+.nav-logo-mark{width:30px;height:30px;border:1.5px solid var(--cyan);border-radius:7px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.nav-logo-mark::after{content:'';position:absolute;width:14px;height:14px;background:var(--cyan);clip-path:polygon(50% 0%,100% 40%,75% 40%,75% 100%,25% 100%,25% 40%,0% 40%);animation:bolt 2s ease-in-out infinite;}
+.nav-links{display:flex;gap:28px;}
+.nav-links a{font-size:12px;color:var(--text-muted);text-decoration:none;letter-spacing:.5px;transition:color .2s;font-family:'JetBrains Mono',monospace;cursor:pointer;}
+.nav-links a:hover{color:var(--cyan);}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.nav-user{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);background:var(--bg2);border:1px solid var(--glass-border);border-radius:20px;padding:4px 12px;}
+.nav-user span{color:var(--cyan);}
+.nav-cta{padding:7px 18px;border:1px solid var(--cyan);border-radius:6px;color:var(--cyan);font-size:13px;font-weight:600;cursor:pointer;background:rgba(56,189,248,0.08);transition:background .2s;font-family:'Syne',sans-serif;}
+.nav-cta:hover{background:rgba(56,189,248,0.18);}
+.nav-logout{padding:7px 14px;border:1px solid var(--glass-border);border-radius:6px;color:var(--text-muted);font-size:12px;cursor:pointer;background:transparent;transition:all .2s;font-family:'JetBrains Mono',monospace;}
+.nav-logout:hover{border-color:var(--red);color:var(--red);}
+
+section{scroll-margin-top:65px;}
+
+/* ═══════════════════════════════════════
+   HERO
+═══════════════════════════════════════ */
+#home{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 40px 60px;text-align:center;overflow:hidden;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border:1px solid rgba(167,139,250,0.35);border-radius:20px;background:rgba(167,139,250,0.08);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--purple);margin-bottom:22px;letter-spacing:1px;}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:blink 1.5s infinite;}
+.summit-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;}
+h1.hero-title{font-family:'Orbitron',monospace;font-size:clamp(36px,6vw,72px);font-weight:900;line-height:1.05;letter-spacing:2px;color:#fff;margin-bottom:16px;text-transform:uppercase;}
+h1.hero-title .c-cyan{color:var(--cyan);}
+h1.hero-title .c-green{color:var(--green);}
+.hero-sub{font-size:17px;color:var(--text-muted);max-width:560px;line-height:1.75;margin:0 auto 32px;font-weight:400;}
+.hero-tags{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;}
+.tag{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;}
+.tag-sdg{background:rgba(74,222,128,0.12);color:var(--green);border:1px solid rgba(74,222,128,0.3);}
+.tag-energy{background:rgba(251,191,36,0.12);color:var(--amber);border:1px solid rgba(251,191,36,0.3);}
+.tag-04{background:rgba(56,189,248,0.12);color:var(--cyan);border:1px solid rgba(56,189,248,0.3);}
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.btn-primary{padding:13px 32px;background:var(--cyan);color:#03070f;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;transition:opacity .2s;}
+.btn-primary:hover{opacity:.85;}
+.btn-ghost{padding:13px 32px;background:transparent;color:var(--text);border:1px solid var(--glass-border);border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Syne',sans-serif;transition:border-color .2s,background .2s;}
+.btn-ghost:hover{border-color:rgba(56,189,248,.4);background:rgba(56,189,248,.05);}
+.grid-visual{margin-top:52px;width:100%;max-width:680px;}
+.flow-dash{stroke-dasharray:8 12;animation:fdash 2s linear infinite;}
+.flow-dash-r{stroke-dasharray:8 12;animation:fdash-r 2.5s linear infinite;}
+@keyframes fdash{to{stroke-dashoffset:-40}}
+@keyframes fdash-r{to{stroke-dashoffset:40}}
+.pulse-ring{animation:pring 2.5s ease-in-out infinite;}
+.pulse-ring2{animation:pring 2.5s ease-in-out infinite;animation-delay:.8s;}
+@keyframes pring{0%{r:28;opacity:.6}100%{r:52;opacity:0}}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:820px;margin:0 auto 80px;padding:0 20px;}
+.stat-card{background:var(--bg1);border:1px solid var(--glass-border);border-radius:12px;padding:18px;text-align:center;}
+.stat-val{font-family:'Orbitron',monospace;font-size:24px;font-weight:700;line-height:1;}
+.stat-lbl{font-size:11px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:6px;font-family:'JetBrains Mono',monospace;}
+.stat-card:nth-child(1) .stat-val{color:var(--cyan);}
+.stat-card:nth-child(2) .stat-val{color:var(--green);}
+.stat-card:nth-child(3) .stat-val{color:var(--amber);}
+.stat-card:nth-child(4) .stat-val{color:var(--purple);}
+
+/* ═══════════════════════════════════════
+   ABOUT
+═══════════════════════════════════════ */
+#about{padding:80px 40px 0;max-width:1100px;margin:0 auto;}
+.section-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;text-align:center;}
+h2.section-title{font-family:'Orbitron',monospace;font-size:clamp(24px,3.5vw,38px);font-weight:700;color:#fff;letter-spacing:1px;text-align:center;text-transform:uppercase;}
+.section-desc{font-size:16px;color:var(--text-muted);max-width:520px;margin:14px auto 48px;line-height:1.75;text-align:center;}
+.project-banner{background:linear-gradient(135deg,rgba(56,189,248,0.08),rgba(167,139,250,0.06),rgba(74,222,128,0.05));border:1px solid rgba(56,189,248,0.25);border-radius:20px;padding:40px;text-align:center;margin-bottom:32px;position:relative;overflow:hidden;}
+.project-banner::before{content:'';position:absolute;top:-1px;left:50%;transform:translateX(-50%);width:200px;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);}
+.project-number{font-family:'Orbitron',monospace;font-size:11px;letter-spacing:4px;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;}
+.project-name{font-family:'Orbitron',monospace;font-size:clamp(28px,4vw,48px);font-weight:900;color:#fff;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px;}
+.project-name span{color:var(--cyan);}
+.project-subtitle{font-size:14px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:28px;}
+.summit-info{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;}
+.summit-chip{padding:6px 18px;border-radius:20px;font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:500;}
+.chip-cyan{background:rgba(56,189,248,.1);color:var(--cyan);border:1px solid rgba(56,189,248,.25);}
+.chip-green{background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.25);}
+.chip-purple{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.25);}
+.chip-amber{background:rgba(251,191,36,.1);color:var(--amber);border:1px solid rgba(251,191,36,.25);}
+.team-section{margin-bottom:32px;}
+.team-header{text-align:center;margin-bottom:28px;}
+.team-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;}
+.team-title{font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:#fff;letter-spacing:1px;}
+.team-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+.team-card{background:var(--bg1);border:1px solid var(--glass-border);border-radius:14px;padding:22px 16px;text-align:center;transition:all .3s;}
+.team-card:hover{border-color:rgba(56,189,248,.4);transform:translateY(-4px);}
+.team-avatar{width:56px;height:56px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:18px;font-weight:700;}
+.av1{background:rgba(56,189,248,.15);color:var(--cyan);border:2px solid rgba(56,189,248,.4);}
+.av2{background:rgba(74,222,128,.15);color:var(--green);border:2px solid rgba(74,222,128,.4);}
+.av3{background:rgba(251,191,36,.15);color:var(--amber);border:2px solid rgba(251,191,36,.4);}
+.av4{background:rgba(167,139,250,.15);color:var(--purple);border:2px solid rgba(167,139,250,.4);}
+.av5{background:rgba(248,113,113,.15);color:var(--red);border:2px solid rgba(248,113,113,.4);}
+.team-name{font-size:13px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:4px;}
+.team-role{font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:.5px;}
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:32px;}
+.about-card{background:var(--bg1);border:1px solid var(--glass-border);border-radius:14px;padding:26px;transition:border-color .3s;}
+.about-card:hover{border-color:rgba(56,189,248,.3);}
+.card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:18px;}
+.icon-cyan{background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25);}
+.icon-green{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);}
+.icon-amber{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.25);}
+.icon-purple{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);}
+.card-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;letter-spacing:.5px;}
+.card-desc{font-size:13px;color:var(--text-muted);line-height:1.7;}
+.sdg-strip{background:var(--bg1);border:1px solid var(--glass-border);border-radius:14px;padding:28px 32px;display:flex;align-items:flex-start;gap:28px;flex-wrap:wrap;margin-bottom:32px;}
+.sdg-badge{width:64px;height:64px;border-radius:12px;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
+.sdg-num{font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:var(--green);line-height:1;}
+.sdg-lbl{font-size:8px;color:var(--green);letter-spacing:1px;margin-top:2px;font-family:'JetBrains Mono',monospace;}
+.sdg-content{flex:1;}
+.sdg-title{font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;}
+.sdg-text{font-size:13px;color:var(--text-muted);line-height:1.7;}
+.sdg-targets{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+.sdg-target{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border-radius:20px;background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.25);}
+
+/* ═══════════════════════════════════════
+   EARTH IMPACT
+═══════════════════════════════════════ */
+#earth-impact{padding:80px 40px;max-width:1100px;margin:0 auto;}
+.earth-header{text-align:center;margin-bottom:60px;}
+.earth-main{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;margin-bottom:60px;}
+.earth-illustration{width:100%;max-width:460px;margin:0 auto;display:block;}
+.earth-title{font-family:'Orbitron',monospace;font-size:clamp(22px,3vw,32px);font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;line-height:1.2;}
+.earth-title span{color:var(--green);}
+.earth-desc{font-size:14px;color:var(--text-muted);line-height:1.8;margin-bottom:28px;}
+.impact-list{display:flex;flex-direction:column;gap:14px;}
+.impact-item{display:flex;align-items:flex-start;gap:14px;padding:14px;background:var(--bg1);border:1px solid var(--glass-border);border-radius:10px;}
+.impact-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.impact-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;}
+.impact-desc{font-size:12px;color:var(--text-muted);line-height:1.6;}
+.impact-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:40px;}
+.impact-stat{background:var(--bg1);border:1px solid var(--glass-border);border-radius:14px;padding:22px;text-align:center;position:relative;overflow:hidden;}
+.impact-stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;}
+.impact-stat:nth-child(1)::after{background:linear-gradient(90deg,var(--cyan),transparent);}
+.impact-stat:nth-child(2)::after{background:linear-gradient(90deg,var(--green),transparent);}
+.impact-stat:nth-child(3)::after{background:linear-gradient(90deg,var(--amber),transparent);}
+.impact-stat:nth-child(4)::after{background:linear-gradient(90deg,var(--purple),transparent);}
+.impact-stat-num{font-family:'Orbitron',monospace;font-size:32px;font-weight:700;line-height:1;margin-bottom:6px;}
+.impact-stat-lbl{font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;}
+.is1 .impact-stat-num{color:var(--cyan);}
+.is2 .impact-stat-num{color:var(--green);}
+.is3 .impact-stat-num{color:var(--amber);}
+.is4 .impact-stat-num{color:var(--purple);}
+.ai-features{background:linear-gradient(135deg,rgba(56,189,248,.06),rgba(167,139,250,.04));border:1px solid rgba(56,189,248,.2);border-radius:16px;padding:32px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+.ai-feat{text-align:center;}
+.ai-feat-icon{font-size:28px;margin-bottom:10px;}
+.ai-feat-title{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:#fff;margin-bottom:6px;letter-spacing:.5px;}
+.ai-feat-desc{font-size:12px;color:var(--text-muted);line-height:1.6;}
+
+/* ═══════════════════════════════════════
+   SIM BRIDGE & FOOTER
+═══════════════════════════════════════ */
+#sim-bridge{padding:60px 40px 40px;text-align:center;position:relative;z-index:1;}
+.enter-btn{display:inline-flex;align-items:center;gap:10px;padding:15px 40px;background:var(--cyan);color:#03070f;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Orbitron',monospace;letter-spacing:1px;transition:opacity .2s;margin-top:20px;}
+.enter-btn:hover{opacity:.85;}
+#landing-footer{border-top:1px solid var(--glass-border);padding:20px 40px;display:flex;align-items:center;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);flex-wrap:wrap;gap:10px;position:relative;z-index:1;}
+#landing-footer span{color:var(--cyan);}
+
+/* ═══════════════════════════════════════
+   SIMULATOR PAGE
+═══════════════════════════════════════ */
+#simulator-page{display:none;}
+header.sim-header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid var(--glass-border);background:rgba(3,7,15,0.9);backdrop-filter:blur(20px);}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-mark{width:36px;height:36px;border:1.5px solid var(--cyan);border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.logo-mark::after{content:'';position:absolute;width:18px;height:18px;background:var(--cyan);clip-path:polygon(50% 0%,100% 40%,75% 40%,75% 100%,25% 100%,25% 40%,0% 40%);animation:bolt 2s ease-in-out infinite;}
+.logo-text{font-family:'Orbitron',monospace;font-size:18px;font-weight:700;letter-spacing:2px;color:#fff;}
+.logo-text span{color:var(--cyan);}
+.header-center{display:flex;align-items:center;gap:6px;}
+.header-pill{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);background:var(--bg2);border:1px solid var(--glass-border);border-radius:20px;padding:4px 12px;}
+.header-status{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12px;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite;}
+.ai-badge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:4px;background:var(--purple-dim);color:var(--purple);border:1px solid rgba(167,139,250,0.3);display:inline-flex;align-items:center;gap:4px;}
+.ai-pulse{width:5px;height:5px;border-radius:50%;background:var(--purple);animation:blink 1.5s infinite;}
+.back-btn{padding:6px 14px;border:1px solid var(--glass-border);border-radius:6px;background:transparent;color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s;}
+.back-btn:hover{border-color:var(--red);color:var(--red);}
+main.sim-main{position:relative;z-index:1;display:grid;grid-template-columns:280px 1fr 300px;height:calc(100vh - 65px);}
+.panel{background:var(--glass);backdrop-filter:blur(20px);border-right:1px solid var(--glass-border);}
+#sidebar-left{grid-row:1/-1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;scrollbar-width:none;}
+.section-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;}
+.metric-card{background:var(--bg2);border:1px solid var(--glass-border);border-radius:12px;padding:14px 16px;transition:border-color .3s;}
+.metric-card:hover{border-color:rgba(56,189,248,.3);}
+.metric-label{font-size:11px;color:var(--text-muted);font-weight:500;letter-spacing:.5px;margin-bottom:6px;}
+.metric-value{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:500;color:#fff;line-height:1;}
+.metric-unit{font-size:12px;color:var(--text-muted);margin-left:4px;}
+.metric-bar{height:3px;background:var(--text-dim);border-radius:2px;margin-top:10px;overflow:hidden;}
+.metric-bar-fill{height:100%;border-radius:2px;transition:width .5s ease,background .5s;}
+.slider-group{background:var(--bg2);border:1px solid var(--glass-border);border-radius:12px;padding:14px 16px;}
+.slider-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.slider-row:last-child{margin-bottom:0;}
+.slider-icon{font-size:16px;width:20px;text-align:center;}
+.slider-label{font-size:11px;color:var(--text-muted);width:40px;}
+.slider-row input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--text-dim);outline:none;}
+.slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--cyan);cursor:pointer;}
+.slider-val{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cyan);width:28px;text-align:right;}
+.btn-group{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.btn{font-family:'Syne',sans-serif;font-size:12px;font-weight:500;padding:8px 10px;border-radius:8px;border:1px solid var(--glass-border);background:var(--bg2);color:var(--text-muted);cursor:pointer;transition:all .2s;text-align:center;}
+.btn:hover{background:var(--glass-hover);color:var(--text);border-color:rgba(56,189,248,.25);}
+.btn.active{background:var(--cyan-dim);color:var(--cyan);border-color:var(--cyan);}
+.btn.active-green{background:var(--green-dim);color:var(--green);border-color:var(--green);}
+#center{display:flex;flex-direction:column;overflow:hidden;}
+#status-bar{padding:10px 24px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;gap:20px;background:var(--bg1);flex-wrap:wrap;}
+.status-chip{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;}
+.alert-badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;margin-left:auto;transition:all .3s;}
+#canvas-wrap{flex:1;position:relative;overflow:hidden;}
+canvas#gridCanvas{display:block;width:100%;height:100%;}
+#chart-wrap{height:160px;padding:12px 24px;border-top:1px solid var(--glass-border);background:var(--bg1);position:relative;}
+.chart-title{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;}
+#sidebar-right{grid-row:1/-1;border-left:1px solid var(--glass-border);border-right:none;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;scrollbar-width:none;}
+.house-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.house-btn{aspect-ratio:1;border-radius:8px;border:1px solid var(--glass-border);background:var(--green-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .2s;position:relative;}
+.house-btn:hover{transform:scale(1.08);}
+.house-btn.off{background:var(--red-dim);border-color:rgba(248,113,113,.3);filter:saturate(.3);}
+.house-priority{position:absolute;top:2px;right:3px;font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);}
+.score-display{background:linear-gradient(135deg,var(--bg2),rgba(56,189,248,.05));border:1px solid var(--glass-border);border-radius:12px;padding:16px;text-align:center;}
+.score-num{font-family:'Orbitron',monospace;font-size:48px;font-weight:700;color:var(--cyan);line-height:1;}
+.score-label{font-size:11px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px;font-family:'JetBrains Mono',monospace;}
+.log-box{background:var(--bg2);border:1px solid var(--glass-border);border-radius:12px;padding:12px;height:140px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--text-dim) transparent;}
+.log-entry{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);display:flex;gap:8px;}
+.log-time{color:var(--cyan);opacity:.6;}
+.log-msg{color:var(--text-muted);}
+.log-warn .log-msg{color:var(--amber);}
+.log-crit .log-msg{color:var(--red);}
+.log-ok .log-msg{color:var(--green);}
+.scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.scenario-btn{font-family:'Syne',sans-serif;font-size:12px;font-weight:500;padding:10px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--bg2);color:var(--text);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.scenario-btn:hover{transform:translateY(-1px);border-color:rgba(56,189,248,.3);background:var(--glass-hover);}
+.balance-meter{position:relative;height:8px;background:var(--bg2);border-radius:4px;overflow:visible;margin:6px 0;}
+.balance-center{position:absolute;left:50%;top:-2px;width:2px;height:12px;background:var(--glass-border);transform:translateX(-50%);}
+.balance-fill{position:absolute;top:0;height:100%;border-radius:4px;transition:all .4s ease;}
+.bonus-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.bonus-card{background:var(--bg2);border:1px solid var(--glass-border);border-radius:10px;padding:12px;text-align:center;}
+.bonus-icon{font-size:22px;margin-bottom:6px;}
+.bonus-val{font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:#fff;}
+.bonus-lbl{font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px;font-family:'JetBrains Mono',monospace;}
+#blackout-overlay{position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;transition:opacity .3s;}
+@keyframes blackout-flash{0%,100%{background:rgba(248,113,113,0)}50%{background:rgba(248,113,113,0.18)}}
+#blackout-overlay.flashing{animation:blackout-flash .4s infinite;}
+#win-overlay{position:fixed;inset:0;background:rgba(3,7,15,.85);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(10px);}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.win-card{border:1px solid var(--cyan);border-radius:20px;background:var(--bg1);padding:48px 64px;text-align:center;animation:fadeInUp .5s ease;}
+.win-icon{font-size:56px;margin-bottom:20px;}
+.win-title{font-family:'Orbitron',monospace;font-size:32px;font-weight:700;color:#fff;margin-bottom:8px;letter-spacing:2px;}
+.win-sub{color:var(--text-muted);margin-bottom:28px;}
+.win-score{font-family:'Orbitron',monospace;font-size:56px;color:var(--cyan);font-weight:700;}
+.win-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:24px 0;}
+.win-stat{background:var(--bg2);border-radius:10px;padding:12px;border:1px solid var(--glass-border);}
+.win-stat-val{font-family:'Orbitron',monospace;font-size:22px;color:var(--green);}
+.win-stat-lbl{font-size:11px;color:var(--text-muted);margin-top:4px;font-family:'JetBrains Mono',monospace;}
+.win-btn{margin-top:8px;padding:12px 32px;background:var(--cyan-dim);border:1px solid var(--cyan);color:var(--cyan);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Orbitron',monospace;letter-spacing:1px;transition:background .2s;}
+.win-btn:hover{background:rgba(56,189,248,.25);}
+#hint-box{padding:8px 24px;font-size:13px;color:#38bdf8;font-family:'JetBrains Mono',monospace;border-bottom:1px solid rgba(56,189,248,.1);}
+</style>
+</head>
+<body>
+
+<div id="blackout-overlay"></div>
+<div id="win-overlay">
+  <div class="win-card">
+    <div class="win-icon">⚡</div>
+    <div class="win-title">GRID MASTERED</div>
+    <div class="win-sub">You've stabilized the smart grid for 100 cycles</div>
+    <div class="win-score" id="win-score-num">0</div>
+    <div style="color:var(--text-muted);font-size:12px;margin-top:4px;font-family:'JetBrains Mono',monospace;letter-spacing:2px;">POINTS</div>
+    <div class="win-stats">
+      <div class="win-stat"><div class="win-stat-val" id="ws-money">$0</div><div class="win-stat-lbl">💰 Money Saved</div></div>
+      <div class="win-stat"><div class="win-stat-val" id="ws-trees">0</div><div class="win-stat-lbl">🌳 Trees Equiv.</div></div>
+      <div class="win-stat"><div class="win-stat-val" id="ws-eff">100%</div><div class="win-stat-lbl">Efficiency</div></div>
+    </div>
+    <button class="win-btn" onclick="resetGame()">PLAY AGAIN</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     LOGIN / REGISTER PAGE
+═══════════════════════════════════════ -->
+<div id="login-page">
+  <div class="login-bg">
+    <canvas id="login-canvas"></canvas>
+    <!-- corner decorators -->
+    <div class="login-corner tl"></div>
+    <div class="login-corner tr"></div>
+    <div class="login-corner bl"></div>
+    <div class="login-corner br"></div>
+    <!-- live ticker -->
+    <div class="login-ticker">
+      <div class="ticker-label">⚡ LIVE</div>
+      <div class="ticker-track" id="ticker-track">
+        <span class="ticker-item">GRID FREQ <span class="t-val">50.02 Hz</span></span>
+        <span class="ticker-item">SOLAR OUTPUT <span class="t-green">8.4 kW</span></span>
+        <span class="ticker-item">WIND TURBINES <span class="t-green">ACTIVE</span></span>
+        <span class="ticker-item">CO₂ OFFSET <span class="t-green">+124 kg</span></span>
+        <span class="ticker-item">NODES ONLINE <span class="t-val">12/12</span></span>
+        <span class="ticker-item">BATTERY <span class="t-green">72%</span></span>
+        <span class="ticker-item">AI OPTIMIZER <span class="t-green">ENGAGED</span></span>
+        <span class="ticker-item">SDG 7 TARGET <span class="t-amber">ON TRACK</span></span>
+        <span class="ticker-item">DEMAND <span class="t-val">18.6 kW</span></span>
+        <span class="ticker-item">SUPPLY <span class="t-green">21.2 kW</span></span>
+        <!-- duplicate for seamless loop -->
+        <span class="ticker-item">GRID FREQ <span class="t-val">50.02 Hz</span></span>
+        <span class="ticker-item">SOLAR OUTPUT <span class="t-green">8.4 kW</span></span>
+        <span class="ticker-item">WIND TURBINES <span class="t-green">ACTIVE</span></span>
+        <span class="ticker-item">CO₂ OFFSET <span class="t-green">+124 kg</span></span>
+        <span class="ticker-item">NODES ONLINE <span class="t-val">12/12</span></span>
+        <span class="ticker-item">BATTERY <span class="t-green">72%</span></span>
+        <span class="ticker-item">AI OPTIMIZER <span class="t-green">ENGAGED</span></span>
+        <span class="ticker-item">SDG 7 TARGET <span class="t-amber">ON TRACK</span></span>
+        <span class="ticker-item">DEMAND <span class="t-val">18.6 kW</span></span>
+        <span class="ticker-item">SUPPLY <span class="t-green">21.2 kW</span></span>
+      </div>
+    </div>
+    <!-- ═══ LEFT FLOATING GRAPHIC: Smart Grid Tower ═══ -->
+    <div class="login-graphic lg-left">
+      <svg viewBox="0 0 320 420" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+        <defs>
+          <filter id="glow-l"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <radialGradient id="hub-grad-l" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="wire-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.1"/>
+            <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.6"/>
+            <stop offset="100%" stop-color="#4ade80" stop-opacity="0.1"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Background hex grid -->
+        <g opacity="0.18" stroke="#38bdf8" stroke-width="0.5" fill="none">
+          <polygon points="160,30 184,44 184,72 160,86 136,72 136,44" class="sg-spin-slow" style="transform-origin:160px 58px"/>
+          <polygon points="60,130 84,144 84,172 60,186 36,172 36,144"/>
+          <polygon points="260,130 284,144 284,172 260,186 236,172 236,144"/>
+          <polygon points="110,250 134,264 134,292 110,306 86,292 86,264"/>
+          <polygon points="210,250 234,264 234,292 210,306 186,292 186,264"/>
+          <polygon points="160,340 184,354 184,382 160,396 136,382 136,354"/>
+        </g>
+
+        <!-- Power tower structure -->
+        <g filter="url(#glow-l)">
+          <!-- Tower spine -->
+          <line x1="160" y1="58" x2="160" y2="390" stroke="#38bdf8" stroke-width="1.5" stroke-opacity="0.5"/>
+          <!-- Cross arms -->
+          <line x1="90" y1="120" x2="230" y2="120" stroke="#38bdf8" stroke-width="1.2" stroke-opacity="0.4"/>
+          <line x1="100" y1="200" x2="220" y2="200" stroke="#38bdf8" stroke-width="1.2" stroke-opacity="0.4"/>
+          <line x1="110" y1="280" x2="210" y2="280" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.35"/>
+          <!-- Diagonal braces -->
+          <line x1="90" y1="120" x2="160" y2="200" stroke="#38bdf8" stroke-width="0.7" stroke-opacity="0.25"/>
+          <line x1="230" y1="120" x2="160" y2="200" stroke="#38bdf8" stroke-width="0.7" stroke-opacity="0.25"/>
+          <line x1="100" y1="200" x2="160" y2="280" stroke="#38bdf8" stroke-width="0.7" stroke-opacity="0.25"/>
+          <line x1="220" y1="200" x2="160" y2="280" stroke="#38bdf8" stroke-width="0.7" stroke-opacity="0.25"/>
+          <!-- Power lines with flow -->
+          <line x1="90" y1="120" x2="36" y2="160" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.3" class="sg-dash"/>
+          <line x1="230" y1="120" x2="284" y2="160" stroke="#4ade80" stroke-width="1" stroke-opacity="0.3" class="sg-dash-r"/>
+          <line x1="100" y1="200" x2="36" y2="160" stroke="#a78bfa" stroke-width="1" stroke-opacity="0.25" class="sg-dash"/>
+          <line x1="220" y1="200" x2="284" y2="160" stroke="#fbbf24" stroke-width="1" stroke-opacity="0.25" class="sg-dash-r"/>
+          <!-- Connection lines to bottom nodes -->
+          <line x1="110" y1="280" x2="60" y2="260" stroke="#38bdf8" stroke-width="0.8" stroke-opacity="0.3" class="sg-dash"/>
+          <line x1="210" y1="280" x2="260" y2="260" stroke="#4ade80" stroke-width="0.8" stroke-opacity="0.3" class="sg-dash-r"/>
+          <line x1="160" y1="390" x2="110" y2="350" stroke="#a78bfa" stroke-width="0.8" stroke-opacity="0.3"/>
+          <line x1="160" y1="390" x2="210" y2="350" stroke="#38bdf8" stroke-width="0.8" stroke-opacity="0.3"/>
+        </g>
+
+        <!-- Top hub: spinning rings -->
+        <g filter="url(#glow-l)">
+          <circle cx="160" cy="58" r="32" fill="url(#hub-grad-l)" stroke="#38bdf8" stroke-width="0" opacity="0.6"/>
+          <circle cx="160" cy="58" r="22" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-opacity="0.8" class="sg-spin" style="transform-origin:160px 58px;stroke-dasharray:8 5"/>
+          <circle cx="160" cy="58" r="30" fill="none" stroke="#38bdf8" stroke-width="0.8" stroke-opacity="0.4" class="sg-spin-rev" style="transform-origin:160px 58px;stroke-dasharray:4 8"/>
+          <circle cx="160" cy="58" r="14" fill="rgba(56,189,248,0.15)" stroke="#38bdf8" stroke-width="1.5"/>
+          <!-- ⚡ bolt shape -->
+          <polygon points="163,44 155,58 161,58 157,72 165,55 159,55" fill="#38bdf8" opacity="0.95"/>
+        </g>
+
+        <!-- Mid-left node: Solar -->
+        <g filter="url(#glow-l)" transform="translate(36,158)">
+          <circle r="14" cx="0" cy="0" fill="rgba(251,191,36,0.12)" stroke="#fbbf24" stroke-width="1.4" class="sg-pulse"/>
+          <!-- Sun rays -->
+          <g stroke="#fbbf24" stroke-width="1" opacity="0.7">
+            <line x1="-18" y1="0" x2="-22" y2="0"/><line x1="18" y1="0" x2="22" y2="0"/>
+            <line x1="0" y1="-18" x2="0" y2="-22"/><line x1="0" y1="18" x2="0" y2="22"/>
+            <line x1="-13" y1="-13" x2="-16" y2="-16"/><line x1="13" y1="-13" x2="16" y2="-16"/>
+            <line x1="-13" y1="13" x2="-16" y2="16"/><line x1="13" y1="13" x2="16" y2="16"/>
+          </g>
+          <circle r="7" cx="0" cy="0" fill="rgba(251,191,36,0.3)" stroke="#fbbf24" stroke-width="1"/>
+          <text x="0" y="28" text-anchor="middle" fill="#fbbf24" font-size="8" font-family="JetBrains Mono,monospace" opacity="0.7">SOLAR</text>
+        </g>
+
+        <!-- Mid-right node: Wind -->
+        <g filter="url(#glow-l)" transform="translate(284,158)">
+          <circle r="14" cx="0" cy="0" fill="rgba(74,222,128,0.12)" stroke="#4ade80" stroke-width="1.4" class="sg-pulse2"/>
+          <!-- Wind turbine blades -->
+          <g stroke="#4ade80" stroke-width="1.2" opacity="0.8" class="sg-spin" style="transform-origin:0px 0px">
+            <line x1="0" y1="0" x2="0" y2="-13"/>
+            <line x1="0" y1="0" x2="11" y2="6.5"/>
+            <line x1="0" y1="0" x2="-11" y2="6.5"/>
+          </g>
+          <circle r="4" cx="0" cy="0" fill="#4ade80" opacity="0.6"/>
+          <text x="0" y="28" text-anchor="middle" fill="#4ade80" font-size="8" font-family="JetBrains Mono,monospace" opacity="0.7">WIND</text>
+        </g>
+
+        <!-- Left mid node: Battery -->
+        <g filter="url(#glow-l)" transform="translate(60,258)">
+          <circle r="14" cx="0" cy="0" fill="rgba(167,139,250,0.12)" stroke="#a78bfa" stroke-width="1.4" class="sg-pulse3"/>
+          <!-- Battery shape -->
+          <rect x="-8" y="-6" width="16" height="12" rx="2" fill="none" stroke="#a78bfa" stroke-width="1.2" opacity="0.8"/>
+          <rect x="8" y="-3" width="3" height="6" rx="1" fill="#a78bfa" opacity="0.6"/>
+          <rect x="-6" y="-4" width="7" height="8" rx="1" fill="#a78bfa" opacity="0.4"/>
+          <text x="0" y="28" text-anchor="middle" fill="#a78bfa" font-size="8" font-family="JetBrains Mono,monospace" opacity="0.7">BATT</text>
+        </g>
+
+        <!-- Right mid node: Industry -->
+        <g filter="url(#glow-l)" transform="translate(260,258)">
+          <circle r="14" cx="0" cy="0" fill="rgba(248,113,113,0.12)" stroke="#f87171" stroke-width="1.4" class="sg-pulse"/>
+          <!-- Factory chimneys -->
+          <rect x="-10" y="-4" width="20" height="10" rx="1" fill="none" stroke="#f87171" stroke-width="1.2" opacity="0.8"/>
+          <rect x="-8" y="-11" width="4" height="7" rx="1" fill="none" stroke="#f87171" stroke-width="1" opacity="0.7"/>
+          <rect x="4" y="-11" width="4" height="7" rx="1" fill="none" stroke="#f87171" stroke-width="1" opacity="0.7"/>
+          <text x="0" y="28" text-anchor="middle" fill="#f87171" font-size="8" font-family="JetBrains Mono,monospace" opacity="0.7">IND</text>
+        </g>
+
+        <!-- Bottom nodes: Homes -->
+        <g filter="url(#glow-l)" transform="translate(110,348)">
+          <circle r="12" cx="0" cy="0" fill="rgba(56,189,248,0.1)" stroke="#38bdf8" stroke-width="1.2" class="sg-pulse2"/>
+          <polygon points="0,-10 -9,0 9,0" fill="none" stroke="#38bdf8" stroke-width="1.2" opacity="0.8"/>
+          <rect x="-6" y="0" width="12" height="10" rx="1" fill="none" stroke="#38bdf8" stroke-width="1" opacity="0.7"/>
+          <text x="0" y="26" text-anchor="middle" fill="#38bdf8" font-size="7" font-family="JetBrains Mono,monospace" opacity="0.6">HOME</text>
+        </g>
+        <g filter="url(#glow-l)" transform="translate(210,348)">
+          <circle r="12" cx="0" cy="0" fill="rgba(56,189,248,0.1)" stroke="#38bdf8" stroke-width="1.2" class="sg-pulse3"/>
+          <polygon points="0,-10 -9,0 9,0" fill="none" stroke="#38bdf8" stroke-width="1.2" opacity="0.8"/>
+          <rect x="-6" y="0" width="12" height="10" rx="1" fill="none" stroke="#38bdf8" stroke-width="1" opacity="0.7"/>
+          <text x="0" y="26" text-anchor="middle" fill="#38bdf8" font-size="7" font-family="JetBrains Mono,monospace" opacity="0.6">HOME</text>
+        </g>
+
+        <!-- Energy bar graph at bottom (power flow chart) -->
+        <g transform="translate(30,398)" opacity="0.7">
+          <text x="0" y="-4" fill="#64748b" font-size="7" font-family="JetBrains Mono,monospace">POWER FLOW</text>
+          <rect x="0" y="0" width="16" height="14" rx="2" fill="#38bdf8" opacity="0.7" class="sg-wave" style="transform-origin:8px 14px"/>
+          <rect x="22" y="4" width="16" height="10" rx="2" fill="#4ade80" opacity="0.7" class="sg-wave" style="transform-origin:30px 14px;animation-delay:0.4s"/>
+          <rect x="44" y="2" width="16" height="12" rx="2" fill="#fbbf24" opacity="0.7" class="sg-wave" style="transform-origin:52px 14px;animation-delay:0.8s"/>
+          <rect x="66" y="6" width="16" height="8" rx="2" fill="#a78bfa" opacity="0.7" class="sg-wave" style="transform-origin:74px 14px;animation-delay:1.2s"/>
+          <rect x="88" y="1" width="16" height="13" rx="2" fill="#f87171" opacity="0.7" class="sg-wave" style="transform-origin:96px 14px;animation-delay:0.3s"/>
+        </g>
+
+        <!-- Floating data label -->
+        <text x="160" y="415" text-anchor="middle" fill="#38bdf8" font-size="8" font-family="JetBrains Mono,monospace" opacity="0.5" class="sg-blink">GRID NODES ACTIVE</text>
+      </svg>
+    </div>
+
+    <!-- ═══ RIGHT FLOATING GRAPHIC: Circular Grid Dashboard ═══ -->
+    <div class="login-graphic lg-right">
+      <svg viewBox="0 0 320 420" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+        <defs>
+          <filter id="glow-r"><feGaussianBlur stdDeviation="3.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <radialGradient id="hub-grad-r" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#4ade80" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
+          </radialGradient>
+          <clipPath id="circle-clip"><circle cx="160" cy="180" r="130"/></clipPath>
+        </defs>
+
+        <!-- Outer decorative rings -->
+        <circle cx="160" cy="180" r="130" fill="none" stroke="#38bdf8" stroke-width="0.5" stroke-opacity="0.2" stroke-dasharray="3 6" class="sg-spin-slow"/>
+        <circle cx="160" cy="180" r="120" fill="none" stroke="#4ade80" stroke-width="0.4" stroke-opacity="0.15"/>
+        <circle cx="160" cy="180" r="108" fill="none" stroke="#38bdf8" stroke-width="0.8" stroke-opacity="0.2" stroke-dasharray="1 4" class="sg-spin-rev" style="transform-origin:160px 180px"/>
+
+        <!-- Segment arcs (energy distribution) -->
+        <!-- Solar arc 110° -->
+        <path d="M160,180 L160,72 A108,108 0 0,1 262,237 Z" fill="rgba(251,191,36,0.06)" stroke="#fbbf24" stroke-width="0.8" stroke-opacity="0.35"/>
+        <!-- Wind arc 80° -->
+        <path d="M160,180 L262,237 A108,108 0 0,1 124,285 Z" fill="rgba(74,222,128,0.06)" stroke="#4ade80" stroke-width="0.8" stroke-opacity="0.35"/>
+        <!-- Battery arc 60° -->
+        <path d="M160,180 L124,285 A108,108 0 0,1 58,237 Z" fill="rgba(167,139,250,0.06)" stroke="#a78bfa" stroke-width="0.8" stroke-opacity="0.35"/>
+        <!-- Grid arc 70° -->
+        <path d="M160,180 L58,237 A108,108 0 0,1 58,123 Z" fill="rgba(56,189,248,0.06)" stroke="#38bdf8" stroke-width="0.8" stroke-opacity="0.35"/>
+        <!-- Demand arc 40° -->
+        <path d="M160,180 L58,123 A108,108 0 0,1 160,72 Z" fill="rgba(248,113,113,0.06)" stroke="#f87171" stroke-width="0.8" stroke-opacity="0.35"/>
+
+        <!-- Animated orbit ring with node -->
+        <g class="sg-orbit" filter="url(#glow-r)">
+          <circle cx="160" cy="72" r="7" fill="rgba(56,189,248,0.2)" stroke="#38bdf8" stroke-width="1.5"/>
+          <circle cx="160" cy="72" r="3" fill="#38bdf8"/>
+        </g>
+
+        <!-- Radial spokes -->
+        <g stroke="#38bdf8" stroke-width="0.6" stroke-opacity="0.2">
+          <line x1="160" y1="180" x2="160" y2="72"/>
+          <line x1="160" y1="180" x2="262" y2="237"/>
+          <line x1="160" y1="180" x2="124" y2="285"/>
+          <line x1="160" y1="180" x2="58" y2="237"/>
+          <line x1="160" y1="180" x2="58" y2="123"/>
+        </g>
+
+        <!-- Inner ring (spinning) -->
+        <circle cx="160" cy="180" r="70" fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.25" stroke-dasharray="5 8" class="sg-spin" style="transform-origin:160px 180px"/>
+        <circle cx="160" cy="180" r="55" fill="none" stroke="#4ade80" stroke-width="0.7" stroke-opacity="0.2" stroke-dasharray="3 10" class="sg-spin-rev" style="transform-origin:160px 180px"/>
+
+        <!-- Hub center -->
+        <circle cx="160" cy="180" r="42" fill="url(#hub-grad-r)" filter="url(#glow-r)"/>
+        <circle cx="160" cy="180" r="32" fill="rgba(4,10,20,0.85)" stroke="#4ade80" stroke-width="1.8"/>
+        <circle cx="160" cy="180" r="24" fill="rgba(74,222,128,0.08)" stroke="#4ade80" stroke-width="0.8" stroke-opacity="0.5"/>
+        <!-- AI brain / grid symbol -->
+        <g fill="none" stroke="#4ade80" stroke-width="1.4" opacity="0.9" filter="url(#glow-r)">
+          <!-- Hexagon -->
+          <polygon points="160,163 173,171 173,187 160,195 147,187 147,171"/>
+          <!-- Inner lines -->
+          <line x1="160" y1="163" x2="160" y2="195"/>
+          <line x1="147" y1="171" x2="173" y2="187"/>
+          <line x1="173" y1="171" x2="147" y2="187"/>
+        </g>
+        <circle cx="160" cy="179" r="5" fill="#4ade80" opacity="0.8" class="sg-pulse"/>
+
+        <!-- Floating percentage labels at arc tips -->
+        <g font-family="JetBrains Mono,monospace" text-anchor="middle" filter="url(#glow-r)">
+          <text x="198" y="68" fill="#fbbf24" font-size="9" opacity="0.8">☀ 34%</text>
+          <text x="274" y="248" fill="#4ade80" font-size="9" opacity="0.8">◉ 24%</text>
+          <text x="118" y="316" fill="#a78bfa" font-size="9" opacity="0.8">▣ 18%</text>
+          <text x="34" y="248" fill="#38bdf8" font-size="9" opacity="0.8">⬡ 14%</text>
+          <text x="76" y="90" fill="#f87171" font-size="9" opacity="0.8">◆ 10%</text>
+        </g>
+
+        <!-- Outer node dots on arcs -->
+        <g filter="url(#glow-r)">
+          <circle cx="214" cy="95" r="6" fill="rgba(251,191,36,0.2)" stroke="#fbbf24" stroke-width="1.5" class="sg-pulse"/>
+          <circle cx="265" cy="210" r="6" fill="rgba(74,222,128,0.2)" stroke="#4ade80" stroke-width="1.5" class="sg-pulse2"/>
+          <circle cx="88" cy="290" r="6" fill="rgba(167,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5" class="sg-pulse3"/>
+          <circle cx="55" cy="165" r="6" fill="rgba(56,189,248,0.2)" stroke="#38bdf8" stroke-width="1.5" class="sg-pulse"/>
+          <circle cx="122" cy="88" r="6" fill="rgba(248,113,113,0.2)" stroke="#f87171" stroke-width="1.5" class="sg-pulse2"/>
+        </g>
+
+        <!-- Flow energy packets along spokes (animated dots) -->
+        <g filter="url(#glow-r)">
+          <circle r="3" fill="#fbbf24" opacity="0.9">
+            <animateMotion dur="2s" repeatCount="indefinite" path="M214,95 L160,180"/>
+          </circle>
+          <circle r="3" fill="#4ade80" opacity="0.9">
+            <animateMotion dur="2.4s" repeatCount="indefinite" path="M265,210 L160,180"/>
+          </circle>
+          <circle r="3" fill="#a78bfa" opacity="0.9">
+            <animateMotion dur="1.8s" repeatCount="indefinite" path="M160,180 L88,290"/>
+          </circle>
+          <circle r="3" fill="#38bdf8" opacity="0.9">
+            <animateMotion dur="2.2s" repeatCount="indefinite" path="M160,180 L55,165"/>
+          </circle>
+          <circle r="3" fill="#f87171" opacity="0.9">
+            <animateMotion dur="2.6s" repeatCount="indefinite" path="M122,88 L160,180"/>
+          </circle>
+        </g>
+
+        <!-- Title below -->
+        <text x="160" y="336" text-anchor="middle" fill="#38bdf8" font-size="10" font-family="Orbitron,monospace" letter-spacing="3" opacity="0.7">ENERGY MIX</text>
+        <text x="160" y="352" text-anchor="middle" fill="#64748b" font-size="8" font-family="JetBrains Mono,monospace" opacity="0.5">REAL-TIME DISTRIBUTION</text>
+
+        <!-- Mini waveform at bottom -->
+        <g transform="translate(60,372)" fill="none" stroke="#38bdf8" stroke-width="1.2" stroke-opacity="0.5">
+          <polyline points="0,16 15,8 25,20 35,4 45,18 55,10 65,22 75,6 85,16 100,8 110,18 120,4 135,16 150,10 160,20 175,5 190,16 200,12"/>
+          <animateTransform attributeName="transform" type="translate" values="0,0;-60,0;0,0" dur="4s" repeatCount="indefinite" additive="sum"/>
+        </g>
+        <text x="160" y="408" text-anchor="middle" fill="#4ade80" font-size="7" font-family="JetBrains Mono,monospace" opacity="0.45" class="sg-blink">● OPTIMIZER ACTIVE</text>
+      </svg>
+    </div>
+
+    <!-- bottom status bar -->
+    <div class="login-statusbar">
+      <div class="login-statusbar-item"><div class="sb-dot"></div>GRID NOMINAL</div>
+      <div class="login-statusbar-item">GridOS v3.0.0 · Smart Grid Intelligence Platform</div>
+      <div class="login-statusbar-item">Digital Green Summit · 2025</div>
+    </div>
+  </div>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-mark"></div>
+      <div class="login-logo-text">Grid<span>OS</span></div>
+    </div>
+    <div class="login-tagline">Smart Grid Intelligence Platform
+
+    </div>
+    <div class="login-tagline">INTELLIGENT TODAY - RELIABLE TOMORROW - SUSTAINABLE FOREVER
+      
+    </div>
+    <div class="login-summit">
+      <div class="login-summit-badge"><div class="lpulse"></div>Digital Green Summit · INNOSPARK</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Create Account</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div class="login-form active" id="form-login">
+      <div id="login-error" class="login-error">Invalid username or password.</div>
+      <div id="login-success" class="login-success"></div>
+      <div class="login-form-group">
+        <label class="login-label">Username</label>
+        <input class="login-input" type="text" id="login-user" placeholder="Enter username" autocomplete="off">
+      </div>
+      <div class="login-form-group">
+        <label class="login-label">Password</label>
+        <input class="login-input" type="password" id="login-pass" placeholder="Enter password">
+      </div>
+      <button class="login-btn" onclick="doLogin()">ACCESS GRID SYSTEM</button>
+      <button class="login-btn secondary" onclick="guestLogin()">Continue as Guest</button>
+      <div class="login-hint" style="margin-top:12px;">Default admin: <span>admin</span> / <span>grid2025</span></div>
+
+      <!-- Registered users list -->
+      <div class="users-section" id="users-list-section" style="display:none;">
+        <div class="users-title">Registered Accounts</div>
+        <div id="users-list"></div>
+      </div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div class="login-form" id="form-register">
+      <div id="reg-error" class="login-error"></div>
+      <div id="reg-success" class="login-success"></div>
+      <div class="login-form-group">
+        <label class="login-label">Full Name</label>
+        <input class="login-input" type="text" id="reg-name" placeholder="Your full name">
+      </div>
+      <div class="login-form-group">
+        <label class="login-label">Username</label>
+        <input class="login-input" type="text" id="reg-user" placeholder="Choose a username" autocomplete="off">
+      </div>
+      <div class="login-form-group">
+        <label class="login-label">Password</label>
+        <input class="login-input" type="password" id="reg-pass" placeholder="Choose a password" oninput="checkPwdStrength(this.value)">
+        <div class="pwd-strength">
+          <div class="pwd-bar"><div class="pwd-bar-fill" id="pwd-bar-fill"></div></div>
+          <div class="pwd-text" id="pwd-text">Enter a password</div>
+        </div>
+      </div>
+      <div class="login-form-group">
+        <label class="login-label">Confirm Password</label>
+        <input class="login-input" type="password" id="reg-pass2" placeholder="Repeat password">
+      </div>
+      <button class="login-btn" onclick="doRegister()">CREATE ACCOUNT</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     LANDING PAGE
+═══════════════════════════════════════ -->
+<div id="landing-page">
+  <nav id="landing-nav">
+    <a class="nav-logo" href="#">
+      <div class="nav-logo-mark"></div>
+      Grid<span>OS</span>
+    </a>
+    <div class="nav-links">
+      <a onclick="scrollSec('#home')">Home</a>
+      <a onclick="scrollSec('#about')">About</a>
+      <a onclick="scrollSec('#earth-impact')">Impact</a>
+      <a onclick="goToSimulator()">Simulator</a>
+    </div>
+    <div class="nav-right">
+      <div class="nav-user">Logged in as <span id="nav-username">Guest</span></div>
+      <button class="nav-cta" onclick="goToSimulator()">Launch ↗</button>
+      <button class="nav-logout" onclick="doLogout()">Logout</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section id="home">
+    <div class="hero-badge"><div class="badge-dot"></div>PROJECT EXHIBITION — INNOSPARK</div>
+    <div class="summit-tag">Digital Green Summit · 2025</div>
+    <h1 class="hero-title">Smart <span class="c-cyan">Grid</span><br><span class="c-green">Simulator</span></h1>
+    <p class="hero-sub">An AI-powered interactive platform to visualize, manage, and optimize renewable energy distribution across urban grid networks.</p>
+    <div class="hero-tags">
+      <span class="tag tag-sdg">SDG 7 — Clean Energy</span>
+      <span class="tag tag-energy">⚡ Renewable</span>
+      <span class="tag tag-04">#04 Project</span>
+    </div>
+    <div class="hero-btns">
+      <button class="btn-primary" onclick="goToSimulator()">Launch Simulator</button>
+      <button class="btn-ghost" onclick="scrollSec('#about')">Learn More</button>
+    </div>
+    <div class="grid-visual">
+      <svg viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:240px;">
+        <circle cx="350" cy="120" r="65" fill="none" stroke="rgba(56,189,248,0.06)" stroke-width="1"/>
+        <circle cx="350" cy="120" r="110" fill="none" stroke="rgba(56,189,248,0.04)" stroke-width="1"/>
+        <line x1="350" y1="0" x2="350" y2="240" stroke="rgba(56,189,248,0.03)" stroke-width="1"/>
+        <line x1="0" y1="120" x2="700" y2="120" stroke="rgba(56,189,248,0.03)" stroke-width="1"/>
+        <circle class="pulse-ring" cx="350" cy="120" r="28" fill="none" stroke="rgba(74,222,128,0.5)" stroke-width="1.5"/>
+        <circle class="pulse-ring2" cx="350" cy="120" r="28" fill="none" stroke="rgba(56,189,248,0.4)" stroke-width="1"/>
+        <circle cx="350" cy="120" r="26" fill="rgba(74,222,128,0.1)" stroke="#4ade80" stroke-width="1.5"/>
+        <text x="350" y="126" text-anchor="middle" font-size="16" fill="#4ade80">⚡</text>
+        <line class="flow-dash" x1="350" y1="94" x2="350" y2="28" stroke="rgba(56,189,248,0.5)" stroke-width="1.5"/>
+        <line class="flow-dash" x1="373" y1="106" x2="452" y2="62" stroke="rgba(56,189,248,0.5)" stroke-width="1.5"/>
+        <line class="flow-dash" x1="375" y1="132" x2="455" y2="178" stroke="rgba(56,189,248,0.5)" stroke-width="1.5"/>
+        <line class="flow-dash-r" x1="350" y1="146" x2="350" y2="210" stroke="rgba(56,189,248,0.5)" stroke-width="1.5"/>
+        <line class="flow-dash-r" x1="326" y1="134" x2="244" y2="178" stroke="rgba(56,189,248,0.5)" stroke-width="1.5"/>
+        <line class="flow-dash" x1="326" y1="108" x2="248" y2="62" stroke="rgba(56,189,248,0.5)" stroke-width="1.5"/>
+        <rect x="331" y="10" width="38" height="34" rx="5" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.5)" stroke-width="1"/>
+        <text x="350" y="31" text-anchor="middle" font-size="13">🏠</text>
+        <rect x="458" y="45" width="38" height="34" rx="5" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.5)" stroke-width="1"/>
+        <text x="477" y="66" text-anchor="middle" font-size="13">🏠</text>
+        <rect x="462" y="162" width="38" height="34" rx="5" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.5)" stroke-width="1"/>
+        <text x="481" y="183" text-anchor="middle" font-size="13">🏠</text>
+        <rect x="331" y="196" width="38" height="34" rx="5" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.5)" stroke-width="1"/>
+        <text x="350" y="217" text-anchor="middle" font-size="13">🏠</text>
+        <rect x="199" y="162" width="38" height="34" rx="5" fill="rgba(74,222,128,0.12)" stroke="rgba(74,222,128,0.5)" stroke-width="1"/>
+        <text x="218" y="183" text-anchor="middle" font-size="13">🏠</text>
+        <rect x="204" y="45" width="38" height="34" rx="5" fill="rgba(74,222,128,0.12)" stroke="rgba(74,222,128,0.5)" stroke-width="1"/>
+        <text x="223" y="66" text-anchor="middle" font-size="13">🏠</text>
+        <rect x="30" y="82" width="58" height="38" rx="6" fill="rgba(251,191,36,0.1)" stroke="rgba(251,191,36,0.45)" stroke-width="1"/>
+        <text x="59" y="106" text-anchor="middle" font-size="11" fill="rgba(251,191,36,0.9)" font-family="JetBrains Mono,monospace">☀ SOL</text>
+        <line class="flow-dash" x1="88" y1="101" x2="203" y2="73" stroke="rgba(251,191,36,0.4)" stroke-width="1"/>
+        <rect x="612" y="82" width="58" height="38" rx="6" fill="rgba(167,139,250,0.1)" stroke="rgba(167,139,250,0.45)" stroke-width="1"/>
+        <text x="641" y="106" text-anchor="middle" font-size="11" fill="rgba(167,139,250,0.9)" font-family="JetBrains Mono,monospace">💨 WND</text>
+        <line class="flow-dash-r" x1="612" y1="101" x2="497" y2="73" stroke="rgba(167,139,250,0.4)" stroke-width="1"/>
+        <text x="350" y="158" text-anchor="middle" font-size="10" fill="#4ade80" font-family="JetBrains Mono,monospace">+4.2 kW BALANCED</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val">12</div><div class="stat-lbl">Grid Nodes</div></div>
+    <div class="stat-card"><div class="stat-val">3</div><div class="stat-lbl">Energy Sources</div></div>
+    <div class="stat-card"><div class="stat-val">100</div><div class="stat-lbl">Sim Cycles</div></div>
+    <div class="stat-card"><div class="stat-val">SDG7</div><div class="stat-lbl">Goal Target</div></div>
+  </div>
+
+  <!-- ABOUT -->
+  <section id="about">
+    <div class="section-eyebrow">About This Project</div>
+    <h2 class="section-title">Where Code Meets Sustainability</h2>
+    <p class="section-desc">A student-built simulation exploring how intelligent grid systems can enable a cleaner, more resilient energy future.</p>
+    <div class="project-banner">
+      <div class="project-number">Digital Green Summit · Student Compendium · INNOSPARK</div>
+      <div class="project-name">Smart <span>Grid</span> Simulator</div>
+      <div class="project-subtitle">Energy SDG 7 — Affordable and Clean Energy</div>
+      <div class="summit-info">
+        <span class="summit-chip chip-cyan">⚡ Energy Technology</span>
+        <span class="summit-chip chip-green">🌱 Sustainability</span>
+        <span class="summit-chip chip-purple">🤖 AI Systems</span>
+        <span class="summit-chip chip-amber">☀️ Renewables</span>
+      </div>
+    </div>
+    <div class="team-section">
+      <div class="team-header">
+        <div class="team-eyebrow">Created By</div>
+        <div class="team-title">THE TEAM</div>
+      </div>
+      <div class="team-grid">
+        <div class="team-card"><div class="team-avatar av1">JB</div><div class="team-name">Jebina Rajendra Kumar</div><div class="team-role">Lead Developer</div></div>
+        <div class="team-card"><div class="team-avatar av2">MJ</div><div class="team-name">Mahie Jain</div><div class="team-role">UI Designer</div></div>
+        <div class="team-card"><div class="team-avatar av3">AS</div><div class="team-name">Aina Sony</div><div class="team-role">Research Lead</div></div>
+        <div class="team-card"><div class="team-avatar av4">BA</div><div class="team-name">Benedict Alex</div><div class="team-role">AI Engineer</div></div>
+        <div class="team-card"><div class="team-avatar av5">ED</div><div class="team-name">Elroy Dsa</div><div class="team-role">Data Analyst</div></div>
+      </div>
+    </div>
+    <div class="sdg-strip">
+      <div class="sdg-badge"><div class="sdg-num">7</div><div class="sdg-lbl">SDG</div></div>
+      <div class="sdg-content">
+        <div class="sdg-title">Affordable and Clean Energy</div>
+        <div class="sdg-text">This simulator directly addresses UN Sustainable Development Goal 7 — ensuring access to affordable, reliable, sustainable and modern energy for all. By simulating real-world grid dynamics, users experience the challenges and decisions behind energy policy firsthand.</div>
+        <div class="sdg-targets">
+          <span class="sdg-target">7.1 Universal Access</span>
+          <span class="sdg-target">7.2 Renewables Share</span>
+          <span class="sdg-target">7.3 Energy Efficiency</span>
+        </div>
+      </div>
+    </div>
+    <div class="about-grid">
+      <div class="about-card"><div class="card-icon icon-cyan">⚡</div><div class="card-title">What is a Smart Grid?</div><div class="card-desc">A smart grid uses digital communication technology to detect and react to local changes in usage. Unlike traditional grids, it allows two-way flow of electricity and data — enabling real-time optimization, fault detection, and renewable source integration.</div></div>
+      <div class="about-card"><div class="card-icon icon-green">🤖</div><div class="card-title">AI-Powered Optimization</div><div class="card-desc">Our simulator features an AI mode that automatically sheds low-priority loads during stress events, balances supply and demand in real time, and provides contextual hints to the operator — mirroring modern grid management systems.</div></div>
+      <div class="about-card"><div class="card-icon icon-amber">☀️</div><div class="card-title">Renewable Integration</div><div class="card-desc">Players manage solar and wind inputs against fluctuating residential and industrial demand. Weather scenarios test how well renewables maintain grid stability under real-world variability and peak demand events.</div></div>
+      <div class="about-card"><div class="card-icon icon-purple">📊</div><div class="card-title">Real-time Analytics</div><div class="card-desc">Track power flow, CO₂ offsets, money saved, battery storage levels, and grid efficiency across 100 simulation cycles. Visual feedback through live charts and animated node maps helps players understand the consequences of every decision.</div></div>
+    </div>
+  </section>
+
+  <!-- EARTH IMPACT -->
+  <section id="earth-impact">
+    <div class="earth-header">
+      <div class="section-eyebrow">Environmental Impact</div>
+      <h2 class="section-title">How This Code Helps Our Earth</h2>
+      <p class="section-desc">Smart grids powered by AI are one of the most powerful tools humanity has to fight climate change and build a sustainable future.</p>
+    </div>
+    <div class="earth-main">
+      <div>
+        <svg class="earth-illustration" viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="earthGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(56,189,248,0.15)"/><stop offset="100%" stop-color="rgba(56,189,248,0)"/></radialGradient>
+            <radialGradient id="earthGrad" cx="40%" cy="35%" r="60%"><stop offset="0%" stop-color="#0f4c75"/><stop offset="40%" stop-color="#0a3a5c"/><stop offset="100%" stop-color="#061e30"/></radialGradient>
+            <clipPath id="earthClip"><circle cx="230" cy="230" r="130"/></clipPath>
+          </defs>
+          <circle cx="230" cy="230" r="200" fill="url(#earthGlow)"/>
+          <ellipse cx="230" cy="230" rx="185" ry="60" fill="none" stroke="rgba(56,189,248,0.08)" stroke-width="1" stroke-dasharray="6,8"/>
+          <ellipse cx="230" cy="230" rx="155" ry="40" fill="none" stroke="rgba(74,222,128,0.08)" stroke-width="1" stroke-dasharray="4,6"/>
+          <circle cx="230" cy="230" r="130" fill="url(#earthGrad)" stroke="rgba(56,189,248,0.3)" stroke-width="1.5"/>
+          <g clip-path="url(#earthClip)">
+            <path d="M210 140 C218 135 228 138 232 145 L236 160 C240 168 238 178 232 182 L228 195 C226 202 228 210 230 215 L228 228 C226 232 222 234 218 232 L212 225 C208 218 206 210 208 202 L210 192 C212 185 210 178 206 172 L202 160 C200 152 204 144 210 140Z" fill="rgba(74,222,128,0.25)" stroke="rgba(74,222,128,0.4)" stroke-width="0.5"/>
+            <path d="M220 145 C226 140 234 142 238 148 L240 158 C238 165 232 168 228 165 L222 160 C218 156 216 150 220 145Z" fill="rgba(74,222,128,0.2)" stroke="rgba(74,222,128,0.35)" stroke-width="0.5"/>
+            <path d="M170 165 C178 158 188 160 192 168 L195 180 C198 188 196 198 192 204 L188 218 C184 226 180 232 176 228 L170 220 C166 212 164 202 166 192 L168 180 C170 173 168 169 170 165Z" fill="rgba(74,222,128,0.22)" stroke="rgba(74,222,128,0.38)" stroke-width="0.5"/>
+            <path d="M255 150 C268 145 280 148 284 156 L290 168 C294 178 292 190 286 196 L278 202 C270 206 262 204 256 198 L250 188 C246 180 246 170 250 162 L255 150Z" fill="rgba(74,222,128,0.2)" stroke="rgba(74,222,128,0.35)" stroke-width="0.5"/>
+            <path d="M275 238 C282 234 290 236 292 242 L294 252 C294 258 290 264 284 264 L276 262 C270 258 268 250 270 244 L275 238Z" fill="rgba(74,222,128,0.18)" stroke="rgba(74,222,128,0.3)" stroke-width="0.5"/>
+            <circle cx="230" cy="230" r="130" fill="none" stroke="rgba(56,189,248,0.15)" stroke-width="8"/>
+          </g>
+          <circle cx="230" cy="88" r="8" fill="rgba(56,189,248,0.2)" stroke="var(--cyan)" stroke-width="1.5"/>
+          <text x="230" y="93" text-anchor="middle" font-size="9">⚡</text>
+          <circle cx="372" cy="230" r="8" fill="rgba(74,222,128,0.2)" stroke="var(--green)" stroke-width="1.5"/>
+          <text x="372" y="235" text-anchor="middle" font-size="9">☀</text>
+          <circle cx="230" cy="372" r="8" fill="rgba(251,191,36,0.2)" stroke="var(--amber)" stroke-width="1.5"/>
+          <text x="230" y="377" text-anchor="middle" font-size="9">💨</text>
+          <circle cx="88" cy="230" r="8" fill="rgba(167,139,250,0.2)" stroke="var(--purple)" stroke-width="1.5"/>
+          <text x="88" y="235" text-anchor="middle" font-size="9">🤖</text>
+          <circle cx="230" cy="230" r="18" fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.4)" stroke-width="1"/>
+          <text x="230" y="236" text-anchor="middle" font-size="16" fill="rgba(56,189,248,0.9)">🤖</text>
+          <circle cx="230" cy="45" r="4" fill="var(--cyan)" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="415" cy="230" r="4" fill="var(--green)" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="2.5s" repeatCount="indefinite"/></circle>
+          <circle cx="230" cy="415" r="4" fill="var(--amber)" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="1.8s" repeatCount="indefinite"/></circle>
+          <circle cx="45" cy="230" r="4" fill="var(--purple)" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite"/></circle>
+        </svg>
+      </div>
+      <div class="earth-content">
+        <div class="earth-title">Powering a <span>Greener</span> Planet with Artificial Intelligence</div>
+        <p class="earth-desc">Traditional energy grids waste up to 30% of electricity through inefficiency. Our AI-powered smart grid simulator demonstrates how machine intelligence can revolutionize energy distribution — reducing waste, integrating renewables seamlessly, and preventing blackouts before they happen.</p>
+        <div class="impact-list">
+          <div class="impact-item"><div class="impact-icon icon-green">🌱</div><div><div class="impact-title">Reducing Carbon Emissions</div><div class="impact-desc">By maximizing renewable energy usage, smart grids can cut power-sector emissions by up to 70% by 2040.</div></div></div>
+          <div class="impact-item"><div class="impact-icon icon-cyan">🔋</div><div><div class="impact-title">Intelligent Energy Storage</div><div class="impact-desc">AI decides when to store surplus solar/wind energy and when to release it — ensuring 24/7 clean power.</div></div></div>
+          <div class="impact-item"><div class="impact-icon icon-amber">⚡</div><div><div class="impact-title">Preventing Blackouts</div><div class="impact-desc">Predictive AI detects grid stress milliseconds before failure, rerouting power automatically.</div></div></div>
+          <div class="impact-item"><div class="impact-icon icon-purple">🌍</div><div><div class="impact-title">Universal Energy Access</div><div class="impact-desc">Smart microgrids can bring electricity to the 759 million people who still lack access.</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="impact-stats">
+      <div class="impact-stat is1"><div class="impact-stat-num">30%</div><div class="impact-stat-lbl">Grid Waste Eliminated</div></div>
+      <div class="impact-stat is2"><div class="impact-stat-num">70%</div><div class="impact-stat-lbl">CO₂ Reduction Potential</div></div>
+      <div class="impact-stat is3"><div class="impact-stat-num">759M</div><div class="impact-stat-lbl">People Without Energy</div></div>
+      <div class="impact-stat is4"><div class="impact-stat-num">2050</div><div class="impact-stat-lbl">Net Zero Target Year</div></div>
+    </div>
+    <div class="ai-features">
+      <div class="ai-feat"><div class="ai-feat-icon">🧠</div><div class="ai-feat-title">Predictive Load Balancing</div><div class="ai-feat-desc">AI forecasts demand 24 hours ahead using weather, time, and usage patterns.</div></div>
+      <div class="ai-feat"><div class="ai-feat-icon">🔄</div><div class="ai-feat-title">Auto Load Shedding</div><div class="ai-feat-desc">When supply drops, AI instantly identifies non-critical loads to safely disconnect.</div></div>
+      <div class="ai-feat"><div class="ai-feat-icon">📡</div><div class="ai-feat-title">Real-time Grid Intelligence</div><div class="ai-feat-desc">Continuous monitoring of every node, line, and source — detecting faults in milliseconds.</div></div>
+    </div>
+  </section>
+
+  <div id="sim-bridge">
+    <div class="section-eyebrow">Live Simulation</div>
+    <h2 class="section-title" style="margin-top:8px;">Take Control of the Grid</h2>
+    <p class="section-desc" style="margin-bottom:0;">Manage solar, wind, battery storage, and 12 nodes to keep the grid stable for 100 cycles.</p>
+    <button class="enter-btn" onclick="goToSimulator()">⚡ Enter Simulator</button>
+  </div>
+
+  <footer id="landing-footer">
+    <div>Grid<span>OS</span> v3.0.0 — Digital Green Summit Student Compendium</div>
+    <div>Created by Jebina · Mahie · Aina · Benedict · Elroy &nbsp;|&nbsp; SDG 7 · INNOSPARK</div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SIMULATOR PAGE
+═══════════════════════════════════════ -->
+<div id="simulator-page">
+  <header class="sim-header">
+    <div class="logo"><div class="logo-mark"></div><div class="logo-text">Grid<span>OS</span></div></div>
+    <div class="header-center">
+      <div class="header-pill">v3.0.0</div>
+      <div class="header-pill" id="clock-pill">00:00:00</div>
+      <div class="ai-badge"><div class="ai-pulse"></div>AI MODE</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="header-status">
+        <div class="status-dot" id="sys-dot"></div>
+        <span id="sys-status-text" style="font-size:12px;font-family:'JetBrains Mono',monospace;">GRID NOMINAL</span>
+      </div>
+      <button class="back-btn" onclick="goToLanding()">← Back</button>
+    </div>
+  </header>
+
+  <main class="sim-main">
+    <aside id="sidebar-left" class="panel">
+      <div>
+        <div class="section-label">Energy Supply</div>
+        <div class="slider-group">
+          <div class="slider-row">
+            <span class="slider-icon">☀️</span><span class="slider-label">Solar</span>
+            <input type="range" id="solar" min="0" max="100" value="60" oninput="document.getElementById('solar-val').textContent=this.value">
+            <span class="slider-val" id="solar-val">60</span>
+          </div>
+          <div class="slider-row">
+            <span class="slider-icon">💨</span><span class="slider-label">Wind</span>
+            <input type="range" id="wind" min="0" max="100" value="50" oninput="document.getElementById('wind-val').textContent=this.value">
+            <span class="slider-val" id="wind-val">50</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">Key Metrics</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="metric-card"><div class="metric-label">DEMAND</div><div class="metric-value" id="m-demand">0<span class="metric-unit">kW</span></div><div class="metric-bar"><div class="metric-bar-fill" id="bar-demand" style="width:0%;background:var(--amber)"></div></div></div>
+          <div class="metric-card"><div class="metric-label">SUPPLY</div><div class="metric-value" id="m-supply">0<span class="metric-unit">kW</span></div><div class="metric-bar"><div class="metric-bar-fill" id="bar-supply" style="width:0%;background:var(--cyan)"></div></div></div>
+          <div class="metric-card"><div class="metric-label">NET BALANCE</div><div class="metric-value" id="m-balance">0<span class="metric-unit">kW</span></div><div class="balance-meter"><div class="balance-center"></div><div class="balance-fill" id="balance-fill"></div></div></div>
+          <div class="metric-card"><div class="metric-label">CO₂ OFFSET</div><div class="metric-value" id="m-co2">0<span class="metric-unit">kg</span></div><div class="metric-bar"><div class="metric-bar-fill" id="bar-co2" style="width:0%;background:var(--green)"></div></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">Green Impact</div>
+        <div class="bonus-grid">
+          <div class="bonus-card"><div class="bonus-icon">💰</div><div class="bonus-val" id="b-money">$0</div><div class="bonus-lbl">Money Saved</div></div>
+          <div class="bonus-card"><div class="bonus-icon">🌳</div><div class="bonus-val" id="b-trees">0</div><div class="bonus-lbl">Trees Equiv.</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">Battery Storage</div>
+        <div class="metric-card" style="cursor:pointer" onclick="toggleBattery()">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div class="metric-label">BATTERY BANK</div><div class="btn" id="bat-btn" style="padding:3px 10px;font-size:11px;">OFF</div></div>
+          <div class="metric-value" id="m-battery">50<span class="metric-unit">%</span></div>
+          <div class="metric-bar" style="margin-top:8px;height:6px;border-radius:3px"><div class="metric-bar-fill" id="bar-battery" style="width:50%;background:var(--green);height:6px;border-radius:3px"></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">Load Controls</div>
+        <div class="btn-group">
+          <button class="btn" id="ev-btn" onclick="toggleEV()">⚡ EV Charging</button>
+          <button class="btn active-green" id="industry-btn" onclick="toggleIndustry()">🏭 Industry</button>
+          <button class="btn active" id="ai-btn" onclick="toggleAI()">🤖 AI Mode</button>
+          <button class="btn" id="nightmode-btn" onclick="toggleNight()">🌙 Night Mode</button>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">Analytics</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--glass-border)"><span style="font-size:12px;color:var(--text-muted)">Total Energy Served</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text)" id="a-total">0 kWh</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--glass-border)"><span style="font-size:12px;color:var(--text-muted)">Blackout Events</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px" id="a-blackouts">0</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0"><span style="font-size:12px;color:var(--text-muted)">Grid Efficiency</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--green)" id="a-eff">100%</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <div id="center">
+      <div id="status-bar">
+        <div class="status-chip">
+          <div id="status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)"></div>
+          <span id="status-text" style="color:var(--green);font-family:'JetBrains Mono',monospace;">GRID STABLE</span>
+        </div>
+        <div style="width:1px;height:16px;background:var(--glass-border)"></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted)">HOUR <span id="hour-display" style="color:var(--cyan)">00</span>:00</div>
+        <div style="width:1px;height:16px;background:var(--glass-border)"></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)">CYCLE <span id="cycle-display" style="color:var(--cyan)">0</span>/100</div>
+        <div id="alert-badge" class="alert-badge" style="background:var(--green-dim);color:var(--green);border:1px solid var(--green)">● NOMINAL</div>
+      </div>
+      <div id="hint-box">🤖 AI Hint: Optimizing grid...</div>
+      <div id="canvas-wrap"><canvas id="gridCanvas"></canvas></div>
+      <div id="chart-wrap">
+        <div class="chart-title">Power Flow — Last 24 Cycles</div>
+        <canvas id="chartCanvas" style="height:110px"></canvas>
+      </div>
+    </div>
+
+    <aside id="sidebar-right">
+      <div><div class="score-display"><div class="score-num" id="score-display">0</div><div class="score-label">Grid Score</div></div></div>
+      <div>
+        <div class="section-label">Node Control</div>
+        <div class="house-grid" id="houseGrid"></div>
+      </div>
+      <div>
+        <div class="section-label">Weather Scenarios</div>
+        <div class="scenario-grid">
+          <button class="scenario-btn" onclick="setScenario('sunny')">☀️ Sunny Day</button>
+          <button class="scenario-btn" onclick="setScenario('rainy')">🌧 Rainy</button>
+          <button class="scenario-btn" onclick="setScenario('storm')">⛈ Storm</button>
+          <button class="scenario-btn" onclick="setScenario('night')">🌑 Blackout</button>
+          <button class="scenario-btn" onclick="setScenario('peak')" style="grid-column:1/-1">⚡ Peak Demand Event</button>
+        </div>
+      </div>
+      <div><div class="section-label">AI System Log</div><div class="log-box" id="logBox"></div></div>
+      <div>
+        <div class="section-label">Progress</div>
+        <div style="background:var(--bg2);border:1px solid var(--glass-border);border-radius:8px;padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px;color:var(--text-muted)">Mission Progress</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)" id="progress-pct">0%</span></div>
+          <div style="height:6px;background:var(--text-dim);border-radius:3px;overflow:hidden"><div id="progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:3px;transition:width .5s"></div></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// USER STORAGE (localStorage)
+// ═══════════════════════════════════════
+const STORAGE_KEY = 'gridos_users';
+const SESSION_KEY = 'gridos_session';
+
+function loadUsers() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch { return {}; }
+}
+
+function saveUsers(users) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+}
+
+function initDefaultUsers() {
+  const users = loadUsers();
+  // Seed default accounts if not present
+  if (!users['admin']) {
+    users['admin'] = { password: 'grid2025', name: 'Administrator', role: 'admin', created: Date.now() };
+  }
+  if (!users['guest']) {
+    users['guest'] = { password: '', name: 'Guest User', role: 'guest', created: Date.now() };
+  }
+  saveUsers(users);
+}
+
+// ═══════════════════════════════════════
+// TAB SWITCHER
+// ═══════════════════════════════════════
+function switchTab(tab) {
+  document.getElementById('form-login').classList.toggle('active', tab === 'login');
+  document.getElementById('form-register').classList.toggle('active', tab === 'register');
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  // Clear messages
+  ['login-error','login-success','reg-error','reg-success'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  if (tab === 'login') refreshUsersList();
+}
+
+// ═══════════════════════════════════════
+// USERS LIST (shown on login tab)
+// ═══════════════════════════════════════
+function refreshUsersList() {
+  const users = loadUsers();
+  const keys = Object.keys(users).filter(u => u !== 'guest');
+  const section = document.getElementById('users-list-section');
+  const list = document.getElementById('users-list');
+  if (keys.length <= 1) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = keys.map(u => `
+    <div class="user-entry">
+      <span class="user-entry-name">${users[u].name || u} <span style="color:var(--text-muted);font-size:10px;">(${u})</span></span>
+      <span class="user-entry-badge">${users[u].role || 'user'}</span>
+      ${u !== 'admin' ? `<span class="user-entry-del" onclick="deleteUser('${u}')" title="Delete">✕</span>` : ''}
+    </div>
+  `).join('');
+}
+
+function deleteUser(username) {
+  if (!confirm(`Delete account "${username}"?`)) return;
+  const users = loadUsers();
+  delete users[username];
+  saveUsers(users);
+  refreshUsersList();
+}
+
+// ═══════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════
+let currentUser = '';
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim().toLowerCase();
+  const p = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  const ok  = document.getElementById('login-success');
+  err.style.display = 'none'; ok.style.display = 'none';
+
+  const users = loadUsers();
+  if (users[u] && users[u].password === p) {
+    currentUser = u;
+    sessionStorage.setItem(SESSION_KEY, u);
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('landing-page').style.display = 'block';
+    document.getElementById('nav-username').textContent = users[u].name || u;
+  } else {
+    err.textContent = 'Invalid username or password.';
+    err.style.display = 'block';
+  }
+}
+
+function guestLogin() {
+  currentUser = 'guest';
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('landing-page').style.display = 'block';
+  document.getElementById('nav-username').textContent = 'Guest';
+}
+
+function doLogout() {
+  currentUser = '';
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('simulator-page').style.display = 'none';
+  document.getElementById('landing-page').style.display = 'none';
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.body.style.overflow = '';
+  switchTab('login');
+}
+
+// ═══════════════════════════════════════
+// REGISTER
+// ═══════════════════════════════════════
+function checkPwdStrength(val) {
+  const fill = document.getElementById('pwd-bar-fill');
+  const txt  = document.getElementById('pwd-text');
+  let score = 0;
+  if (val.length >= 6) score++;
+  if (val.length >= 10) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const levels = [
+    { pct:'20%', color:'var(--red)',    label:'Very Weak' },
+    { pct:'40%', color:'var(--red)',    label:'Weak'      },
+    { pct:'60%', color:'var(--amber)',  label:'Fair'      },
+    { pct:'80%', color:'var(--amber)',  label:'Good'      },
+    { pct:'100%',color:'var(--green)',  label:'Strong'    },
+  ];
+  const lvl = levels[Math.max(0, score - 1)] || levels[0];
+  fill.style.width   = val ? lvl.pct   : '0%';
+  fill.style.background = val ? lvl.color : 'transparent';
+  txt.textContent    = val ? lvl.label  : 'Enter a password';
+  txt.style.color    = val ? lvl.color  : 'var(--text-muted)';
+}
+
+function doRegister() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const user  = document.getElementById('reg-user').value.trim().toLowerCase();
+  const pass  = document.getElementById('reg-pass').value;
+  const pass2 = document.getElementById('reg-pass2').value;
+  const err   = document.getElementById('reg-error');
+  const ok    = document.getElementById('reg-success');
+  err.style.display = 'none'; ok.style.display = 'none';
+
+  // Validation
+  if (!name)              return showRegError('Please enter your full name.');
+  if (!user)              return showRegError('Please choose a username.');
+  if (user.length < 3)    return showRegError('Username must be at least 3 characters.');
+  if (!/^[a-z0-9_]+$/.test(user)) return showRegError('Username: only letters, numbers, underscores.');
+  if (!pass)              return showRegError('Please enter a password.');
+  if (pass.length < 6)    return showRegError('Password must be at least 6 characters.');
+  if (pass !== pass2)     return showRegError('Passwords do not match.');
+
+  const users = loadUsers();
+  if (users[user])        return showRegError(`Username "${user}" is already taken.`);
+
+  // Save new user
+  users[user] = { password: pass, name: name, role: 'user', created: Date.now() };
+  saveUsers(users);
+
+  ok.textContent = `✓ Account created! You can now sign in as "${user}".`;
+  ok.style.display = 'block';
+
+  // Clear fields
+  ['reg-name','reg-user','reg-pass','reg-pass2'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pwd-bar-fill').style.width = '0%';
+  document.getElementById('pwd-text').textContent = 'Enter a password';
+
+  // Auto-switch to login after 1.5s
+  setTimeout(() => {
+    switchTab('login');
+    document.getElementById('login-user').value = user;
+  }, 1500);
+}
+
+function showRegError(msg) {
+  const err = document.getElementById('reg-error');
+  err.textContent = msg;
+  err.style.display = 'block';
+}
+
+// Enter key on login
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const lp = document.getElementById('login-page');
+  if (lp.style.display === 'none') return;
+  if (document.getElementById('form-login').classList.contains('active')) doLogin();
+  else doRegister();
+});
+
+// ═══════════════════════════════════════
+// PAGE NAV
+// ═══════════════════════════════════════
+function goToSimulator() {
+  document.getElementById('landing-page').style.display = 'none';
+  document.getElementById('simulator-page').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  resizeCanvas();
+  if (!simStarted) { startSim(); simStarted = true; }
+}
+function goToLanding() {
+  document.getElementById('simulator-page').style.display = 'none';
+  document.getElementById('landing-page').style.display = 'block';
+  document.body.style.overflow = '';
+}
+function scrollSec(id) {
+  document.querySelector(id).scrollIntoView({behavior:'smooth'});
+}
+let simStarted = false;
+
+// ═══════════════════════════════════════
+// SIMULATOR
+// ═══════════════════════════════════════
+const N_HOUSES = 12;
+const demandProfiles = Array.from({length:N_HOUSES}, (_,i) =>
+  Array.from({length:24}, (_,h) => 0.8 + Math.sin((h-6+i)/12*Math.PI)*1.8 + Math.random()*0.4)
+);
+let solarProfile = Array.from({length:24}, (_,h) => Math.max(0, Math.sin((h-6)/12*Math.PI)));
+let windProfile  = Array.from({length:24}, () => 0.5 + Math.random()*0.5);
+let houses = Array(N_HOUSES).fill(true);
+let autoMode=true,evEnabled=false,industryOn=true,nightMode=false;
+let battery={enabled:false,charge:50};
+let hour=0,score=0,cycle=0,gameOver=false;
+let blackoutCount=0,totalEnergy=0,co2Offset=0,moneySaved=0;
+let blackoutCounter=0,gridState='normal';
+let demandHistory=[],supplyHistory=[],batteryHistory=[];
+
+let startTime=Date.now();
+setInterval(()=>{
+  let s=Math.floor((Date.now()-startTime)/1000);
+  let h=String(Math.floor(s/3600)).padStart(2,'0');
+  let m=String(Math.floor((s%3600)/60)).padStart(2,'0');
+  let ss=String(s%60).padStart(2,'0');
+  const el=document.getElementById('clock-pill');
+  if(el) el.textContent=`${h}:${m}:${ss}`;
+},1000);
+
+function log(msg,type=''){
+  const box=document.getElementById('logBox');
+  const div=document.createElement('div');
+  div.className=`log-entry${type?' log-'+type:''}`;
+  div.innerHTML=`<span class="log-time">${String(hour).padStart(2,'0')}:00</span><span class="log-msg">${msg}</span>`;
+  box.insertBefore(div,box.firstChild);
+  if(box.children.length>40) box.removeChild(box.lastChild);
+}
+
+function buildHouseGrid(){
+  const g=document.getElementById('houseGrid');
+  g.innerHTML='';
+  houses.forEach((_,i)=>{
+    const b=document.createElement('div');
+    b.className='house-btn';
+    b.innerHTML=`🏠<span class="house-priority">P${(i%3)+1}</span>`;
+    b.title=`Node ${i+1} — Priority ${(i%3)+1}`;
+    b.onclick=()=>{
+      houses[i]=!houses[i];
+      b.classList.toggle('off',!houses[i]);
+      b.innerHTML=(houses[i]?'🏠':'🏚')+`<span class="house-priority">P${(i%3)+1}</span>`;
+      log(`Node ${i+1} ${houses[i]?'reconnected':'isolated'}`,houses[i]?'ok':'warn');
+    };
+    g.appendChild(b);
+  });
+}
+
+function toggleBattery(){battery.enabled=!battery.enabled;const b=document.getElementById('bat-btn');b.textContent=battery.enabled?'ON':'OFF';b.className=battery.enabled?'btn active-green':'btn';log(`Battery ${battery.enabled?'activated':'deactivated'}`,battery.enabled?'ok':'');}
+function toggleEV(){evEnabled=!evEnabled;document.getElementById('ev-btn').className=evEnabled?'btn active':'btn';log(`EV charging ${evEnabled?'enabled (+5kW)':'disabled'}`,evEnabled?'warn':'ok');}
+function toggleIndustry(){industryOn=!industryOn;document.getElementById('industry-btn').className=industryOn?'btn active-green':'btn';log(`Industrial load ${industryOn?'connected':'disconnected'}`,industryOn?'':'warn');}
+function toggleAI(){autoMode=!autoMode;document.getElementById('ai-btn').className=autoMode?'btn active':'btn';log(`AI optimizer ${autoMode?'engaged':'disengaged'}`,autoMode?'ok':'warn');}
+function toggleNight(){nightMode=!nightMode;document.getElementById('nightmode-btn').className=nightMode?'btn active':'btn';if(nightMode){solarProfile=Array(24).fill(0);log('Night mode: solar offline','warn');}else{solarProfile=Array.from({length:24},(_,h)=>Math.max(0,Math.sin((h-6)/12*Math.PI)));log('Solar restored','ok');}}
+function setScenario(s){
+  switch(s){
+    case'sunny':solarProfile=Array.from({length:24},(_,h)=>Math.max(0,Math.sin((h-6)/12*Math.PI)*1.5));windProfile=Array(24).fill(0.3);log('☀️ Sunny — solar boosted','ok');break;
+    case'rainy':solarProfile=Array(24).fill(0.1);windProfile=Array(24).fill(0.7);log('🌧 Rainy — solar reduced','warn');break;
+    case'storm':solarProfile=Array(24).fill(0.05);windProfile=Array.from({length:24},()=>1.5+Math.random());log('⛈ Storm — max wind','warn');break;
+    case'night':solarProfile=Array(24).fill(0);windProfile=Array(24).fill(0);log('💥 GRID FAILURE!','crit');break;
+    case'peak':houses=Array(N_HOUSES).fill(true);document.querySelectorAll('.house-btn').forEach((b,i)=>{b.classList.remove('off');b.innerHTML='🏠'+`<span class="house-priority">P${(i%3)+1}</span>`;});log('⚡ Peak demand — all nodes online!','crit');break;
+  }
+}
+
+const canvas=document.getElementById('gridCanvas');
+const ctx=canvas.getContext('2d');
+function resizeCanvas(){const w=document.getElementById('canvas-wrap');if(!w)return;canvas.width=w.clientWidth;canvas.height=w.clientHeight;}
+window.addEventListener('resize',resizeCanvas);
+const POSITIONS=Array.from({length:N_HOUSES},(_,i)=>({angle:(i/N_HOUSES)*Math.PI*2-Math.PI/2}));
+let animOffset=0;
+
+function drawGrid(demand,supply,balance){
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  animOffset+=0.5;
+  const cx=W/2,cy=H/2,radius=Math.min(W,H)*0.38;
+  for(let r=1;r<=3;r++){ctx.beginPath();ctx.arc(cx,cy,radius*r/3,0,Math.PI*2);ctx.strokeStyle='rgba(56,189,248,0.04)';ctx.lineWidth=1;ctx.stroke();}
+  for(let a=0;a<360;a+=30){const rad=a*Math.PI/180;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(rad)*radius*1.1,cy+Math.sin(rad)*radius*1.1);ctx.strokeStyle='rgba(56,189,248,0.04)';ctx.lineWidth=0.5;ctx.stroke();}
+  let hubColor=gridState==='normal'?'#4ade80':gridState==='stressed'?'#fbbf24':'#f87171';
+  let flowColor=gridState==='normal'?'#38bdf8':gridState==='stressed'?'#fbbf24':'#f87171';
+  const pulse=Math.sin(Date.now()/600)*0.3+0.7;
+  const hg=ctx.createRadialGradient(cx,cy,0,cx,cy,36);
+  hg.addColorStop(0,hubColor+'cc');hg.addColorStop(1,hubColor+'00');
+  ctx.beginPath();ctx.arc(cx,cy,36*pulse,0,Math.PI*2);ctx.fillStyle=hg;ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,20,0,Math.PI*2);ctx.fillStyle=hubColor+'33';ctx.strokeStyle=hubColor;ctx.lineWidth=1.5;ctx.fill();ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='bold 12px JetBrains Mono,monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('⚡',cx,cy);
+  POSITIONS.forEach(({angle},i)=>{
+    const hx=cx+Math.cos(angle)*radius,hy=cy+Math.sin(angle)*radius,on=houses[i];
+    if(on){const dist=Math.sqrt((hx-cx)**2+(hy-cy)**2),dx=(hx-cx)/dist,dy=(hy-cy)/dist;ctx.save();ctx.strokeStyle=flowColor+'80';ctx.lineWidth=1.5;ctx.setLineDash([6,10]);ctx.lineDashOffset=-(animOffset*(balance>=0?1:-1))%16;ctx.beginPath();ctx.moveTo(cx+dx*22,cy+dy*22);ctx.lineTo(hx-dx*16,hy-dy*16);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
+    else{ctx.save();ctx.strokeStyle='rgba(100,116,139,0.2)';ctx.lineWidth=0.5;ctx.setLineDash([3,6]);ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(hx,hy);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
+    const ns=22;ctx.save();if(on){ctx.shadowColor=flowColor;ctx.shadowBlur=12;}
+    ctx.beginPath();ctx.roundRect(hx-ns,hy-ns,ns*2,ns*2,6);
+    ctx.fillStyle=on?(gridState==='normal'?'rgba(56,189,248,0.12)':gridState==='stressed'?'rgba(251,191,36,0.12)':'rgba(248,113,113,0.12)'):'rgba(100,116,139,0.08)';
+    ctx.strokeStyle=on?(gridState==='normal'?'rgba(56,189,248,0.5)':gridState==='stressed'?'rgba(251,191,36,0.5)':'rgba(248,113,113,0.5)'):'rgba(100,116,139,0.2)';
+    ctx.lineWidth=1;ctx.fill();ctx.stroke();ctx.restore();
+    ctx.font='14px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(on?'🏠':'🏚',hx,hy);
+    ctx.font='9px JetBrains Mono,monospace';ctx.fillStyle=on?'rgba(56,189,248,0.7)':'rgba(100,116,139,0.4)';ctx.fillText(`N${i+1}`,hx,hy+ns+8);
+  });
+  const ba=(battery.charge/100)*Math.PI*2;
+  ctx.beginPath();ctx.arc(cx,cy,28,-Math.PI/2,-Math.PI/2+ba);ctx.strokeStyle=battery.charge>50?'#4ade80':battery.charge>20?'#fbbf24':'#f87171';ctx.lineWidth=3;ctx.stroke();
+  ctx.font='500 11px Syne,sans-serif';ctx.textAlign='center';ctx.fillStyle=balance>=0?'#4ade80':'#f87171';
+  ctx.fillText((balance>=0?'+':'')+balance.toFixed(1)+' kW',cx,cy+44);
+}
+
+let chart;
+function initChart(){
+  chart=new Chart(document.getElementById('chartCanvas'),{
+    type:'line',
+    data:{labels:[],datasets:[
+      {label:'Demand',data:[],borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.05)',borderWidth:1.5,pointRadius:0,tension:0.4},
+      {label:'Supply',data:[],borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,0.05)',borderWidth:1.5,pointRadius:0,tension:0.4},
+      {label:'Battery %',data:[],borderColor:'#4ade80',backgroundColor:'transparent',borderWidth:1,borderDash:[4,3],pointRadius:0,tension:0.4},
+    ]},
+    options:{animation:false,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#64748b',font:{family:'JetBrains Mono',size:10},boxWidth:20}}},
+      scales:{x:{ticks:{color:'#334155',font:{family:'JetBrains Mono',size:9}},grid:{color:'rgba(56,189,248,0.05)'}},
+              y:{ticks:{color:'#334155',font:{family:'JetBrains Mono',size:9}},grid:{color:'rgba(56,189,248,0.05)'}}}}
+  });
+}
+
+function getHint(demand,supply,balance){
+  if(balance<-5) return"⚠ CRITICAL: Disable EV+Industry, Enable Battery, Increase Wind!";
+  if(balance<0){if(evEnabled)return"Turn OFF EV Charging";if(industryOn)return"Reduce Industrial Load";if(!battery.enabled)return"Enable Battery Backup!";return"Increase Wind or shed Houses";}
+  if(balance>=0&&balance<=3) return"✅ Perfect Balance — Maintain this!";
+  if(balance>5) return"Excess power — Turn ON more houses or enable EV";
+  if(hour<6||hour>18) return"🌙 Night: Increase Wind & use Battery";
+  return"System running optimally";
+}
+
+function simulate(){
+  if(gameOver) return;
+  cycle++;hour=(hour+1)%24;
+  let demand=0;
+  houses.forEach((on,i)=>{if(on)demand+=demandProfiles[i][hour];});
+  if(hour>=18&&hour<=22)demand*=1.4;
+  if(evEnabled)demand+=5;if(industryOn)demand+=8;
+  const ss=+document.getElementById('solar').value/100;
+  const ws=+document.getElementById('wind').value/100;
+  let supply=ss*solarProfile[hour]*12+ws*windProfile[hour]*10;
+  if(hour<6||hour>19)supply*=0.6;
+  if(battery.enabled){
+    if(supply>demand&&battery.charge<100){battery.charge=Math.min(100,battery.charge+1.5);log('Battery charging','ok');}
+    else if(demand>supply&&battery.charge>0){supply+=3;battery.charge=Math.max(0,battery.charge-1);}
+  }
+  const balance=supply-demand;
+  if(autoMode&&balance<-2){
+    const ts=houses.findIndex((on,i)=>on&&(i%3)===2);
+    if(ts>=0){houses[ts]=false;const btns=document.querySelectorAll('.house-btn');btns[ts].classList.add('off');btns[ts].innerHTML='🏚'+`<span class="house-priority">P${(ts%3)+1}</span>`;log(`AI: Node ${ts+1} isolated`,'warn');}
+  }
+  if(balance<-3)blackoutCounter++;else blackoutCounter=Math.max(0,blackoutCounter-1);
+  const prev=gridState;
+  if(blackoutCounter>=5){gridState='blackout';if(prev!=='blackout'){blackoutCount++;log('⚠ BLACKOUT EVENT!','crit');}}
+  else if(balance<0)gridState='stressed';
+  else gridState='normal';
+  const ov=document.getElementById('blackout-overlay');
+  if(gridState==='blackout'){ov.style.opacity='1';ov.classList.add('flashing');}
+  else{ov.style.opacity='0';ov.classList.remove('flashing');}
+  if(gridState==='normal')score+=2;else if(gridState==='stressed')score+=1;else score=Math.max(0,score-3);
+  totalEnergy+=demand;
+  if(supply>=demand){co2Offset+=supply*0.2;moneySaved+=supply*0.12;}
+  const eff=Math.round(Math.max(0,Math.min(100,100-(blackoutCount*5))));
+  demandHistory.push(+demand.toFixed(2));supplyHistory.push(+supply.toFixed(2));batteryHistory.push(+battery.charge.toFixed(1));
+  if(demandHistory.length>24){demandHistory.shift();supplyHistory.shift();batteryHistory.shift();chart.data.labels.shift();}
+  chart.data.labels.push(`${hour}h`);
+  chart.data.datasets[0].data=demandHistory;chart.data.datasets[1].data=supplyHistory;chart.data.datasets[2].data=batteryHistory;
+  chart.update('none');
+  updateUI(demand,supply,balance,eff);
+  drawGrid(demand,supply,balance);
+  if(cycle>=100){
+    gameOver=true;
+    document.getElementById('win-score-num').textContent=score;
+    document.getElementById('ws-money').textContent='$'+moneySaved.toFixed(0);
+    document.getElementById('ws-trees').textContent=Math.round(co2Offset/21);
+    document.getElementById('ws-eff').textContent=eff+'%';
+    document.getElementById('win-overlay').style.display='flex';
+  }
+}
+
+function updateUI(demand,supply,balance,eff){
+  document.getElementById('hint-box').textContent='🤖 AI Hint: '+getHint(demand,supply,balance);
+  document.getElementById('m-demand').innerHTML=demand.toFixed(1)+'<span class="metric-unit">kW</span>';
+  document.getElementById('m-supply').innerHTML=supply.toFixed(1)+'<span class="metric-unit">kW</span>';
+  document.getElementById('m-balance').innerHTML=(balance>=0?'+':'')+balance.toFixed(1)+'<span class="metric-unit">kW</span>';
+  document.getElementById('m-co2').innerHTML=co2Offset.toFixed(0)+'<span class="metric-unit">kg</span>';
+  document.getElementById('m-battery').innerHTML=battery.charge.toFixed(0)+'<span class="metric-unit">%</span>';
+  document.getElementById('bar-demand').style.width=Math.min(100,demand/30*100)+'%';
+  document.getElementById('bar-supply').style.width=Math.min(100,supply/30*100)+'%';
+  document.getElementById('bar-battery').style.width=battery.charge+'%';
+  document.getElementById('bar-battery').style.background=battery.charge>50?'var(--green)':battery.charge>20?'var(--amber)':'var(--red)';
+  document.getElementById('bar-co2').style.width=Math.min(100,co2Offset/500*100)+'%';
+  document.getElementById('b-money').textContent='$'+moneySaved.toFixed(0);
+  document.getElementById('b-trees').textContent=Math.round(co2Offset/21);
+  const fill=document.getElementById('balance-fill');
+  const pct=Math.min(1,Math.abs(balance)/15);
+  if(balance>=0){fill.style.left='50%';fill.style.right='auto';fill.style.width=(pct*50)+'%';fill.style.background='var(--cyan)';}
+  else{fill.style.right='50%';fill.style.left='auto';fill.style.width=(pct*50)+'%';fill.style.background='var(--red)';}
+  const dot=document.getElementById('status-dot'),txt=document.getElementById('status-text'),badge=document.getElementById('alert-badge'),sysDot=document.getElementById('sys-dot'),sysTxt=document.getElementById('sys-status-text');
+  if(gridState==='normal'){
+    dot.style.cssText='width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)';txt.style.color='var(--green)';txt.textContent='GRID STABLE';
+    badge.style.cssText='background:var(--green-dim);color:var(--green);border:1px solid var(--green)';badge.textContent='● NOMINAL';
+    sysDot.style.cssText='width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite';sysTxt.textContent='GRID NOMINAL';
+  }else if(gridState==='stressed'){
+    dot.style.cssText='width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px var(--amber)';txt.style.color='var(--amber)';txt.textContent='GRID STRESSED';
+    badge.style.cssText='background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber)';badge.textContent='⚠ STRESSED';
+    sysDot.style.cssText='width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);animation:blink 1s infinite';sysTxt.textContent='LOAD IMBALANCE';
+  }else{
+    dot.style.cssText='width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);animation:blink 0.5s infinite';txt.style.color='var(--red)';txt.textContent='BLACKOUT';
+    badge.style.cssText='background:var(--red-dim);color:var(--red);border:1px solid var(--red);animation:blink 0.5s infinite';badge.textContent='✕ BLACKOUT';
+    sysDot.style.cssText='width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);animation:blink 0.4s infinite';sysTxt.textContent='CRITICAL FAILURE';
+  }
+  document.getElementById('score-display').textContent=score;
+  document.getElementById('hour-display').textContent=String(hour).padStart(2,'0');
+  document.getElementById('cycle-display').textContent=cycle;
+  document.getElementById('progress-pct').textContent=cycle+'%';
+  document.getElementById('progress-bar').style.width=cycle+'%';
+  document.getElementById('a-total').textContent=totalEnergy.toFixed(0)+' kWh';
+  document.getElementById('a-blackouts').textContent=blackoutCount;
+  document.getElementById('a-blackouts').style.color=blackoutCount===0?'var(--green)':blackoutCount<3?'var(--amber)':'var(--red)';
+  document.getElementById('a-eff').textContent=eff+'%';
+}
+
+function resetGame(){
+  score=0;cycle=0;hour=0;gameOver=false;blackoutCount=0;totalEnergy=0;co2Offset=0;moneySaved=0;blackoutCounter=0;gridState='normal';
+  battery={enabled:false,charge:50};houses=Array(N_HOUSES).fill(true);demandHistory=[];supplyHistory=[];batteryHistory=[];
+  document.getElementById('win-overlay').style.display='none';
+  document.getElementById('blackout-overlay').classList.remove('flashing');
+  buildHouseGrid();
+  solarProfile=Array.from({length:24},(_,h)=>Math.max(0,Math.sin((h-6)/12*Math.PI)));
+  windProfile=Array.from({length:24},()=>0.5+Math.random()*0.5);
+  log('System reset — new simulation started','ok');
+}
+
+function startSim(){
+  buildHouseGrid();initChart();resizeCanvas();drawGrid(0,0,0);
+  log('GridOS v3.0.0 initialized','ok');
+  log('AI optimizer online','ok');
+  log('12 residential nodes connected','ok');
+  setInterval(simulate,1000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOGIN PAGE — ULTRA ANIMATED SMART GRID BACKGROUND v3.0
+// ═══════════════════════════════════════════════════════════
+(function () {
+  const lc = document.getElementById('login-canvas');
+  if (!lc) return;
+  const ctx = lc.getContext('2d');
+
+  let W, H, mx = -999, my = -999;
+  function resize() { W = lc.width = window.innerWidth; H = lc.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', () => { resize(); initAll(); });
+  window.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+  /* ── STAR FIELD ── */
+  let stars = [];
+  function initStars() {
+    stars = Array.from({ length: 160 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.2, speed: 0.1 + Math.random() * 0.3,
+      alpha: 0.2 + Math.random() * 0.5, twinkle: Math.random() * Math.PI * 2
+    }));
+  }
+
+  /* ── AURORA WAVE BANDS ── */
+  const AURORA_BANDS = [
+    { color: [56, 189, 248], yOffset: 0.72, amp: 55, freq: 0.0025, speed: 0.007, alpha: 0.055 },
+    { color: [74, 222, 128], yOffset: 0.78, amp: 40, freq: 0.0032, speed: 0.009, alpha: 0.04 },
+    { color: [167, 139, 250], yOffset: 0.68, amp: 65, freq: 0.002, speed: 0.005, alpha: 0.035 },
+    { color: [251, 191, 36], yOffset: 0.82, amp: 30, freq: 0.004, speed: 0.012, alpha: 0.03 },
+  ];
+
+  /* ── HEXAGONAL GRID ── */
+  const HEX_SIZE = 52;
+  let hexCells = [];
+  function initHex() {
+    hexCells = [];
+    const colW = HEX_SIZE * Math.sqrt(3);
+    const rowH = HEX_SIZE * 1.5;
+    for (let row = -1; row < Math.ceil(H / rowH) + 2; row++) {
+      for (let col = -1; col < Math.ceil(W / colW) + 2; col++) {
+        const x = col * colW + (row % 2) * colW / 2;
+        const y = row * rowH;
+        hexCells.push({ x, y, phase: Math.random() * Math.PI * 2, speed: 0.005 + Math.random() * 0.015, active: Math.random() < 0.12 });
+      }
+    }
+  }
+
+  /* ── SMART GRID NODES ── */
+  const NODE_TYPES = [
+    { label: 'HUB', color: '#38bdf8', glyph: '⚡' },
+    { label: 'SOLAR', color: '#fbbf24', glyph: '◈' },
+    { label: 'WIND', color: '#4ade80', glyph: '◉' },
+    { label: 'BATT', color: '#a78bfa', glyph: '▣' },
+    { label: 'HOME', color: '#38bdf8', glyph: '⬡' },
+    { label: 'IND', color: '#f87171', glyph: '◆' },
+  ];
+  let nodes = [];
+  function initNodes() {
+    nodes = [];
+    // Central hub
+    nodes.push({ x: W / 2, y: H / 2, vx: 0, vy: 0, type: 0, r: 30, pulse: 0, level: 0 });
+    // Ring 1 – close nodes
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const d = 170 + Math.random() * 60;
+      nodes.push({ x: W/2+Math.cos(a)*d, y: H/2+Math.sin(a)*d, vx:(Math.random()-.5)*.4, vy:(Math.random()-.5)*.4, type:1+Math.floor(Math.random()*5), r:16+Math.random()*6, pulse:Math.random()*Math.PI*2, level:1 });
+    }
+    // Ring 2 – outer nodes
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2 + Math.random() * 0.4;
+      const d = 280 + Math.random() * Math.min(W, H) * 0.22;
+      nodes.push({ x: W/2+Math.cos(a)*d+(Math.random()-.5)*60, y: H/2+Math.sin(a)*d+(Math.random()-.5)*60, vx:(Math.random()-.5)*.5, vy:(Math.random()-.5)*.5, type:1+Math.floor(Math.random()*5), r:10+Math.random()*7, pulse:Math.random()*Math.PI*2, level:2 });
+    }
+  }
+
+  /* ── ENERGY PACKETS (fat, glowing) ── */
+  let packets = [];
+  function spawnPacket() {
+    if (packets.length > 70) return;
+    const hub = Math.random() < 0.55;
+    const a = hub ? 0 : 1 + Math.floor(Math.random() * (nodes.length - 1));
+    const b = hub ? 1 + Math.floor(Math.random() * (nodes.length - 1)) : 0;
+    const nt = NODE_TYPES[nodes[b].type];
+    packets.push({ a, b, t: 0, speed: 0.003 + Math.random() * 0.008, color: nt.color, size: 2 + Math.random() * 2.5 });
+  }
+  setInterval(spawnPacket, 160);
+
+  /* ── LIGHTNING BOLTS ── */
+  let bolts = [];
+  function spawnBolt() {
+    if (nodes.length < 2) return;
+    const src = Math.floor(Math.random() * nodes.length);
+    const dst = Math.floor(Math.random() * nodes.length);
+    if (src === dst) return;
+    const n1 = nodes[src], n2 = nodes[dst];
+    // Build jagged path
+    const segs = 6 + Math.floor(Math.random() * 5);
+    const pts = [{ x: n1.x, y: n1.y }];
+    for (let i = 1; i < segs; i++) {
+      const frac = i / segs;
+      pts.push({
+        x: n1.x + (n2.x - n1.x) * frac + (Math.random() - 0.5) * 40,
+        y: n1.y + (n2.y - n1.y) * frac + (Math.random() - 0.5) * 40,
+      });
+    }
+    pts.push({ x: n2.x, y: n2.y });
+    const cols = ['#38bdf8', '#4ade80', '#fbbf24', '#a78bfa'];
+    bolts.push({ pts, life: 1, decay: 0.06 + Math.random() * 0.08, color: cols[Math.floor(Math.random() * cols.length)] });
+  }
+  setInterval(spawnBolt, 700);
+
+  /* ── RADAR SWEEP ── */
+  let radarAngle = 0;
+  let radarPings = [];
+
+  /* ── FLOATING DATA STREAMS ── */
+  let dataStreams = [];
+  const DATA_CHARS = '01アイウエオカキクケコ⚡◈◉▣⬡◆ABCDEFGHz kW MW SDG';
+  function initStreams() {
+    dataStreams = Array.from({ length: 18 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      chars: Array.from({ length: 10 + Math.floor(Math.random() * 14) }, () => DATA_CHARS[Math.floor(Math.random() * DATA_CHARS.length)]),
+      speed: 0.5 + Math.random() * 1.2,
+      alpha: 0.06 + Math.random() * 0.12,
+      color: ['#38bdf8', '#4ade80', '#a78bfa'][Math.floor(Math.random() * 3)],
+      size: 9 + Math.floor(Math.random() * 6),
+      updateTimer: 0
+    }));
+  }
+
+  /* ── SHOCKWAVE RINGS ── */
+  let shockwaves = [];
+  function spawnShockwave() {
+    const n = nodes[Math.floor(Math.random() * nodes.length)];
+    shockwaves.push({ x: n.x, y: n.y, r: 10, maxR: 120 + Math.random() * 80, life: 1, color: NODE_TYPES[n.type].color });
+  }
+  setInterval(spawnShockwave, 1200);
+
+  /* ── PARTICLE SPARKS ── */
+  let sparks = [];
+  function spawnSparks(x, y, color, count = 8) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.8 + Math.random() * 2.5;
+      sparks.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 1, color, r: 1.5 + Math.random() * 2 });
+    }
+  }
+  setInterval(() => {
+    const n = nodes[Math.floor(Math.random() * nodes.length)];
+    if (n) spawnSparks(n.x, n.y, NODE_TYPES[n.type].color, 5);
+  }, 400);
+
+  function initAll() { initStars(); initHex(); initNodes(); initStreams(); }
+  initAll();
+
+  /* ── HELPERS ── */
+  function hexPath(cx, cy, size) {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 180 * (60 * i - 30);
+      i === 0 ? ctx.moveTo(cx + size * Math.cos(a), cy + size * Math.sin(a))
+              : ctx.lineTo(cx + size * Math.cos(a), cy + size * Math.sin(a));
+    }
+    ctx.closePath();
+  }
+
+  function drawGlow(x, y, r, color, alpha) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color.replace(')', `,${alpha})`).replace('rgb', 'rgba'));
+    g.addColorStop(1, color.replace(')', ',0)').replace('rgb', 'rgba'));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  let T = 0;
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    T += 0.014;
+
+    /* 1 ── DEEP SPACE BACKGROUND */
+    const bg = ctx.createRadialGradient(W * 0.5, H * 0.45, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.85);
+    bg.addColorStop(0, '#091628');
+    bg.addColorStop(0.4, '#050d1a');
+    bg.addColorStop(1, '#020810');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+    /* 2 ── STAR FIELD */
+    stars.forEach(s => {
+      s.twinkle += 0.03;
+      const a = s.alpha * (0.6 + 0.4 * Math.sin(s.twinkle));
+      ctx.fillStyle = `rgba(200,230,255,${a})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    });
+
+    /* 3 ── AURORA WAVES */
+    AURORA_BANDS.forEach((b, bi) => {
+      ctx.save();
+      const bandH = 100 + bi * 20;
+      for (let pass = 3; pass >= 0; pass--) {
+        ctx.beginPath();
+        const baseY = H * b.yOffset + pass * 12;
+        ctx.moveTo(0, baseY);
+        for (let x = 0; x <= W; x += 8) {
+          const y = baseY + Math.sin(x * b.freq + T * b.speed + bi * 1.3) * b.amp
+                        + Math.sin(x * b.freq * 2.3 + T * b.speed * 1.7) * b.amp * 0.4;
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+        const grad = ctx.createLinearGradient(0, baseY - bandH, 0, baseY + bandH);
+        const [r, g, bl] = b.color;
+        const a = b.alpha * (1 - pass * 0.2);
+        grad.addColorStop(0, `rgba(${r},${g},${bl},0)`);
+        grad.addColorStop(0.5, `rgba(${r},${g},${bl},${a})`);
+        grad.addColorStop(1, `rgba(${r},${g},${bl},0)`);
+        ctx.fillStyle = grad; ctx.fill();
+      }
+      ctx.restore();
+    });
+
+    /* 4 ── HEXAGONAL GRID */
+    hexCells.forEach(h => {
+      h.phase += h.speed;
+      const glow = (0.5 + 0.5 * Math.sin(h.phase));
+      // Mouse proximity boost
+      const dx = h.x - mx, dy = h.y - my;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const hover = Math.max(0, 1 - dist / 180);
+      const alpha = (h.active ? 0.06 + glow * 0.07 : 0.018) + hover * 0.15;
+      ctx.strokeStyle = `rgba(56,189,248,${alpha})`;
+      ctx.lineWidth = h.active ? 1 : 0.4;
+      if (h.active && glow > 0.8) {
+        ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 8;
+      }
+      hexPath(h.x, h.y, HEX_SIZE - 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      // Fill active cells with faint color
+      if (h.active) {
+        ctx.fillStyle = `rgba(56,189,248,${glow * 0.025 + hover * 0.05})`;
+        ctx.fill();
+      }
+    });
+
+    /* 5 ── RADAR SWEEP */
+    radarAngle += 0.018;
+    const radarR = Math.min(W, H) * 0.42;
+    const rx = W * 0.5, ry = H * 0.5;
+    // Radar sweep fan
+    ctx.save();
+    const sweepGrad = ctx.createConicalGradient ? null : null; // fallback
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    ctx.arc(rx, ry, radarR, radarAngle - 0.7, radarAngle);
+    ctx.closePath();
+    const fanGrad = ctx.createRadialGradient(rx, ry, 0, rx, ry, radarR);
+    fanGrad.addColorStop(0, 'rgba(56,189,248,0)');
+    fanGrad.addColorStop(0.6, 'rgba(56,189,248,0.04)');
+    fanGrad.addColorStop(1, 'rgba(56,189,248,0.09)');
+    ctx.fillStyle = fanGrad; ctx.fill();
+    // Sweep leading edge
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    ctx.lineTo(rx + Math.cos(radarAngle) * radarR, ry + Math.sin(radarAngle) * radarR);
+    ctx.strokeStyle = 'rgba(56,189,248,0.5)'; ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 8;
+    ctx.stroke(); ctx.shadowBlur = 0;
+    // Radar circles
+    [0.25, 0.5, 0.75, 1].forEach((f, i) => {
+      ctx.beginPath();
+      ctx.arc(rx, ry, radarR * f, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(56,189,248,${0.04 + i * 0.01})`;
+      ctx.lineWidth = 0.5; ctx.stroke();
+    });
+    // Radar crosshairs
+    ctx.strokeStyle = 'rgba(56,189,248,0.06)'; ctx.lineWidth = 0.5;
+    ctx.setLineDash([4, 8]);
+    ctx.beginPath(); ctx.moveTo(rx - radarR, ry); ctx.lineTo(rx + radarR, ry); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rx, ry - radarR); ctx.lineTo(rx, ry + radarR); ctx.stroke();
+    ctx.setLineDash([]);
+    // Radar pings (nodes sweep detects)
+    nodes.forEach(n => {
+      const angle = Math.atan2(n.y - ry, n.x - rx);
+      let diff = ((radarAngle - angle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+      if (diff < 0.06) radarPings.push({ x: n.x, y: n.y, life: 1, color: NODE_TYPES[n.type].color });
+    });
+    radarPings = radarPings.filter(p => p.life > 0);
+    radarPings.forEach(p => {
+      p.life -= 0.015;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = p.color + Math.round(p.life * 255).toString(16).padStart(2, '0');
+      ctx.shadowColor = p.color; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0;
+    });
+    ctx.restore();
+
+    /* 6 ── NODE CONNECTIONS */
+    nodes.forEach((ni, i) => {
+      nodes.forEach((nj, j) => {
+        if (j <= i) return;
+        const dx = ni.x - nj.x, dy = ni.y - nj.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const limit = (ni.level === 0 || nj.level === 0) ? 600 : 200;
+        if (d > limit) return;
+        const isHub = ni.level === 0 || nj.level === 0;
+        const strength = 1 - d / limit;
+        const pulse = 0.5 + 0.5 * Math.sin(T * 1.5 + i * 0.7 + j * 0.4);
+        const alpha = isHub ? (0.08 + pulse * 0.06) * strength : strength * 0.05;
+        const col = isHub ? '56,189,248' : '56,189,248';
+        // Gradient wire
+        const gr = ctx.createLinearGradient(ni.x, ni.y, nj.x, nj.y);
+        gr.addColorStop(0, `rgba(${col},${alpha})`);
+        gr.addColorStop(0.5, `rgba(${col},${alpha * 1.6})`);
+        gr.addColorStop(1, `rgba(${col},${alpha})`);
+        ctx.strokeStyle = gr;
+        ctx.lineWidth = isHub ? 1 : 0.4;
+        if (!isHub) ctx.setLineDash([4, 10]);
+        ctx.beginPath(); ctx.moveTo(ni.x, ni.y); ctx.lineTo(nj.x, nj.y); ctx.stroke();
+        ctx.setLineDash([]);
+      });
+    });
+
+    /* 7 ── ENERGY PACKETS */
+    packets = packets.filter(p => p.t < 1);
+    packets.forEach(p => {
+      p.t += p.speed;
+      const na = nodes[p.a], nb = nodes[p.b];
+      if (!na || !nb) return;
+      const px = na.x + (nb.x - na.x) * p.t;
+      const py = na.y + (nb.y - na.y) * p.t;
+      // Long glowing trail
+      for (let ti = 0; ti < 12; ti++) {
+        const frac = Math.max(0, p.t - ti * 0.015);
+        const tx = na.x + (nb.x - na.x) * frac;
+        const ty = na.y + (nb.y - na.y) * frac;
+        const a = (1 - ti / 12) * 0.7;
+        const r = p.size * (1 - ti / 14);
+        ctx.beginPath(); ctx.arc(tx, ty, r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + Math.round(a * 255).toString(16).padStart(2, '0');
+        ctx.shadowColor = p.color; ctx.shadowBlur = 8;
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+      // Bright head
+      ctx.beginPath(); ctx.arc(px, py, p.size * 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff'; ctx.shadowColor = p.color; ctx.shadowBlur = 14;
+      ctx.fill(); ctx.shadowBlur = 0;
+    });
+
+    /* 8 ── LIGHTNING BOLTS */
+    bolts = bolts.filter(b => b.life > 0);
+    bolts.forEach(b => {
+      b.life -= b.decay;
+      ctx.save();
+      ctx.globalAlpha = b.life;
+      ctx.strokeStyle = b.color; ctx.lineWidth = 1.5;
+      ctx.shadowColor = b.color; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.moveTo(b.pts[0].x, b.pts[0].y);
+      b.pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+      // Inner white core
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.4; ctx.shadowBlur = 4;
+      ctx.beginPath(); ctx.moveTo(b.pts[0].x, b.pts[0].y);
+      b.pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    /* 9 ── SHOCKWAVE RINGS */
+    shockwaves = shockwaves.filter(s => s.life > 0);
+    shockwaves.forEach(s => {
+      s.r += (s.maxR - s.r) * 0.06;
+      s.life -= 0.018;
+      const a = s.life * 0.4;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.strokeStyle = s.color + Math.round(a * 255).toString(16).padStart(2, '0');
+      ctx.lineWidth = 1.5; ctx.shadowColor = s.color; ctx.shadowBlur = 6;
+      ctx.stroke(); ctx.shadowBlur = 0;
+      // Inner ring
+      if (s.r > 20) {
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 0.6, 0, Math.PI * 2);
+        ctx.strokeStyle = s.color + Math.round(a * 0.4 * 255).toString(16).padStart(2, '0');
+        ctx.lineWidth = 0.5; ctx.stroke();
+      }
+    });
+
+    /* 10 ── PARTICLE SPARKS */
+    sparks = sparks.filter(s => s.life > 0);
+    sparks.forEach(s => {
+      s.x += s.vx; s.y += s.vy;
+      s.vy += 0.04; // gravity
+      s.life -= 0.025;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r * s.life, 0, Math.PI * 2);
+      ctx.fillStyle = s.color + Math.round(s.life * 200).toString(16).padStart(2, '0');
+      ctx.shadowColor = s.color; ctx.shadowBlur = 4;
+      ctx.fill(); ctx.shadowBlur = 0;
+    });
+
+    /* 11 ── FLOATING DATA STREAMS */
+    dataStreams.forEach(ds => {
+      ds.y += ds.speed;
+      ds.updateTimer++;
+      if (ds.updateTimer > 8) {
+        ds.chars[Math.floor(Math.random() * ds.chars.length)] = DATA_CHARS[Math.floor(Math.random() * DATA_CHARS.length)];
+        ds.updateTimer = 0;
+      }
+      if (ds.y > H + ds.chars.length * (ds.size + 2)) ds.y = -ds.chars.length * (ds.size + 2);
+      ctx.font = `${ds.size}px JetBrains Mono, monospace`;
+      ctx.textAlign = 'center';
+      ds.chars.forEach((ch, ci) => {
+        const cy = ds.y - ci * (ds.size + 3);
+        if (cy < -20 || cy > H + 20) return;
+        const fade = ci === 0 ? 1 : (1 - ci / ds.chars.length);
+        ctx.fillStyle = ci === 0
+          ? '#ffffff'
+          : ds.color + Math.round(fade * ds.alpha * 255).toString(16).padStart(2, '0');
+        if (ci === 0) { ctx.shadowColor = ds.color; ctx.shadowBlur = 6; }
+        ctx.fillText(ch, ds.x, cy);
+        ctx.shadowBlur = 0;
+      });
+    });
+
+    /* 12 ── MOUSE GLOW FIELD */
+    if (mx > 0 && my > 0) {
+      const mg = ctx.createRadialGradient(mx, my, 0, mx, my, 180);
+      mg.addColorStop(0, 'rgba(56,189,248,0.06)');
+      mg.addColorStop(0.5, 'rgba(56,189,248,0.025)');
+      mg.addColorStop(1, 'rgba(56,189,248,0)');
+      ctx.fillStyle = mg;
+      ctx.beginPath(); ctx.arc(mx, my, 180, 0, Math.PI * 2); ctx.fill();
+    }
+
+    /* 13 ── NODES (drawn last, on top) */
+    nodes.forEach((n, i) => {
+      // Drift
+      if (n.level > 0) {
+        n.x += n.vx; n.y += n.vy;
+        const pad = 80;
+        if (n.x < pad || n.x > W - pad) n.vx *= -1;
+        if (n.y < pad || n.y > H - pad) n.vy *= -1;
+        // Mouse repulsion
+        const mdx = n.x - mx, mdy = n.y - my;
+        const md = Math.sqrt(mdx * mdx + mdy * mdy);
+        if (md < 120) { n.vx += mdx / md * 0.15; n.vy += mdy / md * 0.15; }
+        n.vx *= 0.995; n.vy *= 0.995;
+      } else {
+        n.x = W / 2 + Math.sin(T * 0.5) * 8;
+        n.y = H / 2 + Math.cos(T * 0.37) * 5;
+      }
+      n.pulse += 0.05;
+      const pf = 0.75 + 0.25 * Math.sin(n.pulse);
+      const nt = NODE_TYPES[n.type];
+      const r = n.r;
+      const isHub = n.level === 0;
+
+      ctx.save();
+
+      if (isHub) {
+        // ── BIG HUB ──
+        // Outer rings
+        for (let ring = 1; ring <= 5; ring++) {
+          const ringR = r + ring * 22 + Math.sin(T * 1.2 + ring * 0.8) * 8;
+          const a = Math.max(0, 0.18 - ring * 0.03) * pf;
+          ctx.beginPath(); ctx.arc(n.x, n.y, ringR, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(56,189,248,${a})`;
+          ctx.lineWidth = ring === 1 ? 1.5 : 0.7;
+          ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = ring < 3 ? 10 : 0;
+          ctx.stroke(); ctx.shadowBlur = 0;
+        }
+        // Rotating hexagon around hub
+        ctx.save();
+        ctx.translate(n.x, n.y); ctx.rotate(T * 0.4);
+        hexPath(0, 0, r + 14);
+        ctx.strokeStyle = `rgba(56,189,248,${0.35 + pf * 0.15})`;
+        ctx.lineWidth = 1.2; ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 12;
+        ctx.stroke(); ctx.shadowBlur = 0;
+        ctx.restore();
+        // Counter-rotating hex
+        ctx.save();
+        ctx.translate(n.x, n.y); ctx.rotate(-T * 0.25);
+        hexPath(0, 0, r + 26);
+        ctx.strokeStyle = `rgba(56,189,248,0.15)`;
+        ctx.lineWidth = 0.6; ctx.stroke();
+        ctx.restore();
+        // Glow blob
+        drawGlow(n.x, n.y, r * 3.5, 'rgb(56,189,248)', 0.18);
+        // Node circle
+        ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(14,30,55,0.9)';
+        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+        ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 20;
+        ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+        // Inner energy circle
+        ctx.beginPath(); ctx.arc(n.x, n.y, r * 0.55, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(56,189,248,${0.12 + pf * 0.1})`; ctx.fill();
+        // Glyph
+        ctx.font = `bold ${r * 0.75}px Arial`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#38bdf8'; ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 8;
+        ctx.fillText('⚡', n.x, n.y); ctx.shadowBlur = 0;
+        // Label
+        ctx.fillStyle = 'rgba(56,189,248,0.7)';
+        ctx.font = 'bold 9px JetBrains Mono, monospace';
+        ctx.fillText('GRID · HUB', n.x, n.y + r + 14);
+      } else {
+        // ── REGULAR NODE ──
+        // Glow
+        drawGlow(n.x, n.y, r * 2.8, nt.color.startsWith('#') ? `rgb(${parseInt(nt.color.slice(1,3),16)},${parseInt(nt.color.slice(3,5),16)},${parseInt(nt.color.slice(5,7),16)})` : nt.color, 0.12 * pf);
+        // Pulse ring
+        const pr = r + 6 + Math.sin(n.pulse * 1.5) * 4;
+        ctx.beginPath(); ctx.arc(n.x, n.y, pr, 0, Math.PI * 2);
+        ctx.strokeStyle = nt.color + '40'; ctx.lineWidth = 0.8; ctx.stroke();
+        // Body
+        ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(6,14,26,0.88)';
+        ctx.strokeStyle = nt.color + 'cc'; ctx.lineWidth = 1.5;
+        ctx.shadowColor = nt.color; ctx.shadowBlur = 10 * pf;
+        ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+        // Inner fill
+        ctx.beginPath(); ctx.arc(n.x, n.y, r * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = nt.color + '22'; ctx.fill();
+        // Glyph
+        ctx.font = `bold ${r * 0.85}px JetBrains Mono, monospace`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = nt.color; ctx.shadowColor = nt.color; ctx.shadowBlur = 6;
+        ctx.fillText(nt.glyph, n.x, n.y); ctx.shadowBlur = 0;
+        // Label
+        ctx.fillStyle = nt.color + '77';
+        ctx.font = '7px JetBrains Mono, monospace';
+        ctx.fillText(nt.label, n.x, n.y + r + 9);
+      }
+      ctx.restore();
+    });
+
+    /* 14 ── VIGNETTE */
+    const vig = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, Math.max(W,H)*0.75);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+initDefaultUsers();
+refreshUsersList();
+
+// Auto-restore session
+const savedSession = sessionStorage.getItem(SESSION_KEY);
+if (savedSession) {
+  const users = loadUsers();
+  if (users[savedSession]) {
+    currentUser = savedSession;
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('landing-page').style.display = 'block';
+    document.getElementById('nav-username').textContent = users[savedSession].name || savedSession;
+  }
+}
+</script>
+</body>
+</html>
